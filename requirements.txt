@@ -1,7 +1,8 @@
 streamlit
 matplotlib
+statsmodels
+pandas
+numpy
 seaborn
 openpyxl
-folium
-streamlit-folium
-pandas
+plotly
