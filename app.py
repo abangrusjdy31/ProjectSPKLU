@@ -8,7 +8,11 @@ import base64
 from statsmodels.tsa.arima.model import ARIMA
 from streamlit_option_menu import option_menu
 
-
+st.set_page_config(
+    page_title="Dashboard SPKLU",
+    page_icon="logo spklu.png",  # Path ke file
+    layout="wide"
+)
     
 # Optional: use wide layout
 st.set_page_config(layout="wide")
