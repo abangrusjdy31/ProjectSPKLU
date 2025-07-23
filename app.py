@@ -1,6 +1,4 @@
-# 📦 SPKLU Streamlit Dashboard Final
 
-streamlit_code = '''
 import streamlit as st
 import pandas as pd
 import matplotlib.pyplot as plt
@@ -353,7 +351,3 @@ elif selected == "Tentang":
     Data berasal dari file Excel: Rincian SPKLU Bulan Juni 2025
     """)
 
-'''
-# Tulis ke file app.py
-with open("app.py", "w") as f:
-    f.write(streamlit_code)
