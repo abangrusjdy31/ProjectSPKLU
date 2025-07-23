@@ -8,12 +8,7 @@ import base64
 from statsmodels.tsa.arima.model import ARIMA
 from streamlit_option_menu import option_menu
 
-st.set_page_config(page_title="Dashboard SPKLU", layout="wide")  # Optional
 
-# Logo di sidebar
-with st.sidebar:
-    st.image("logo.png", width=150)  # Ganti 'logo.png' dengan path/logo kamu
-    st.markdown("## Nama Aplikasi")
     
 # Optional: use wide layout
 st.set_page_config(layout="wide")
