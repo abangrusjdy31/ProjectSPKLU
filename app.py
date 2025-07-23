@@ -75,7 +75,7 @@ with st.sidebar:
 
 # Load file
 try:
-    df = pd.read_excel('/content/Coba kp.xlsx')
+    df = pd.read_excel('Coba kp.xlsx')
     df['TGL BAYAR'] = pd.to_datetime(df['TGL BAYAR'], format='%d/%m/%Y', errors='coerce')
     df['Efisiensi'] = df['RPKWH'] / df['PEMKWH']
 except Exception as e:
