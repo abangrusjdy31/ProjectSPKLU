@@ -200,7 +200,7 @@ if selected == "Menu Utama":
     st.plotly_chart(fig, use_container_width=True)
 
 
-   
+    st.set_page_config(layout="wide")   
     st.title("🗺️ Peta Kota Bandung Berdasarkan Unit Layanan Pelanggan (ULP)")
     
     # Load GeoJSON
