@@ -198,25 +198,38 @@ if selected == "Menu Utama":
 
     st.plotly_chart(fig, use_container_width=True)
 
+
     st.set_page_config(layout="wide")
     st.title("🗺️ Peta Kota Bandung Berdasarkan Unit Layanan Pelanggan (ULP)")
     
-    # Load geojson yang sudah ditambahkan kolom ULP
+    # Load GeoJSON
     with open("kecamatan_bandung_ulp.geojson", "r", encoding="utf-8") as f:
         geojson_data = json.load(f)
+    
+    # Pastikan semua feature punya properti yang diperlukan
+    for feature in geojson_data["features"]:
+        props = feature.get("properties", {})
+        props["Kecamatan"] = props.get("Kecamatan", "Tidak Diketahui")
+        props["ULP"] = props.get("ULP", "Tidak Diketahui")
     
     # Inisialisasi peta
     m = folium.Map(location=[-6.9, 107.6], zoom_start=11)
     
-    # Tambahkan layer GeoJSON ke peta
+    # Buat tooltip aman
+    tooltip = folium.GeoJsonTooltip(
+        fields=["Kecamatan", "ULP"],
+        aliases=["Kecamatan:", "Unit Layanan Pelanggan (ULP):"],
+        localize=True,
+        sticky=True,
+        labels=True,
+        toLocaleString=True
+    )
+    
+    # Tambahkan ke peta
     folium.GeoJson(
         geojson_data,
         name="Kecamatan dan ULP",
-        tooltip=folium.GeoJsonTooltip(
-            fields=["Kecamatan", "ULP"],
-            aliases=["Kecamatan:", "Unit Layanan Pelanggan (ULP):"],
-            sticky=True
-        ),
+        tooltip=tooltip,
         style_function=lambda feature: {
             'fillColor': '#' + format(hash(feature['properties']['ULP']) % 0xFFFFFF, '06x'),
             'color': 'black',
