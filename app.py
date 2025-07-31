@@ -201,7 +201,7 @@ if selected == "Menu Utama":
 
 
 
-    t.set_page_config(layout="wide")
+    st.set_page_config(layout="wide")
     st.title("🗺️ Peta Kota Bandung Berdasarkan Unit Layanan Pelanggan (ULP)")
     
     # Load GeoJSON
