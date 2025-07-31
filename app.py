@@ -231,7 +231,7 @@ if selected == "Menu Utama":
         name="Kecamatan dan ULP",
         tooltip=tooltip,
         style_function=lambda feature: {
-            'fillColor': '#' + format(hash(feature['properties']['ULP']) % 007ACC, '06x'),
+            'fillColor': '#' + format(hash(feature['properties']['ULP']) %007ACC, '06x'),
             'color': 'black',
             'weight': 1,
             'fillOpacity': 0.6
