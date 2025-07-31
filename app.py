@@ -207,11 +207,12 @@ if selected == "Menu Utama":
     with open("kecamatan_bandung_ulp.geojson", "r", encoding="utf-8") as f:
         geojson_data = json.load(f)
     
-    # Pastikan semua feature punya properti yang diperlukan
     for feature in geojson_data["features"]:
-        props = feature.get("properties", {})
-        props["Kecamatan"] = props.get("Kecamatan", "Tidak Diketahui")
-        props["ULP"] = props.get("ULP", "Tidak Diketahui")
+    if "Kecamatan" not in feature["properties"]:
+        feature["properties"]["Kecamatan"] = "Tidak Diketahui"
+    if "ULP" not in feature["properties"]:
+        feature["properties"]["ULP"] = "Tidak Diketahui"
+
     
     # Inisialisasi peta
     m = folium.Map(location=[-6.9, 107.6], zoom_start=11)
