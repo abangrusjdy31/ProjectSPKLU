@@ -210,7 +210,7 @@ if selected == "Menu Utama":
     
     for feature in geojson_data["features"]:
         if "Kecamatan" not in feature["properties"]:
-            feature["properties"]["Kecamatan"] = "Tidak Diketahui"
+            feature["properties"]["nama_kecamatan"] = "Tidak Diketahui"
         if "ULP" not in feature["properties"]:
             feature["properties"]["ULP"] = "Tidak Diketahui"
 
@@ -220,7 +220,7 @@ if selected == "Menu Utama":
     
     # Buat tooltip aman
     tooltip = folium.GeoJsonTooltip(
-        fields=["Kecamatan", "ULP"],
+        fields=["nama_kecamatan", "ULP"],
         aliases=["Kecamatan:", "Unit Layanan Pelanggan (ULP):"],
         localize=True,
         sticky=True,
