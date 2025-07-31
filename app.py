@@ -208,10 +208,10 @@ if selected == "Menu Utama":
         geojson_data = json.load(f)
     
     for feature in geojson_data["features"]:
-    if "Kecamatan" not in feature["properties"]:
-        feature["properties"]["Kecamatan"] = "Tidak Diketahui"
-    if "ULP" not in feature["properties"]:
-        feature["properties"]["ULP"] = "Tidak Diketahui"
+        if "Kecamatan" not in feature["properties"]:
+            feature["properties"]["Kecamatan"] = "Tidak Diketahui"
+        if "ULP" not in feature["properties"]:
+            feature["properties"]["ULP"] = "Tidak Diketahui"
 
     
     # Inisialisasi peta
