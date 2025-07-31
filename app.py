@@ -209,7 +209,7 @@ if selected == "Menu Utama":
         
     
     for feature in geojson_data["features"]:
-        if "Kecamatan" not in feature["properties"]:
+        if "nama_kecamatan" not in feature["properties"]:
             feature["properties"]["nama_kecamatan"] = "Tidak Diketahui"
         if "ULP" not in feature["properties"]:
             feature["properties"]["ULP"] = "Tidak Diketahui"
