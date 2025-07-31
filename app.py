@@ -198,31 +198,35 @@ if selected == "Menu Utama":
 
     st.plotly_chart(fig, use_container_width=True)
 
-    # Load GeoJSON kecamatan
-    with open("kecamatan_bandung.geojson", "r") as f:
-        geojson = json.load(f)
-
-    # Buat dataframe summary per kecamatan
-    df['Tanggal'] = df['TGL BAYAR'].dt.date
-    ranking = df.groupby('UNITUP').agg({
-        'PEMKWH': 'sum',
-        'RPKWH': 'sum'
-    }).reset_index().rename(columns={'UNITUP': 'kecamatan'})
-
-    # Map visualisasi
-    fig = px.choropleth_mapbox(
-        ranking,
-        geojson=geojson,
-        featureidkey="properties.nama_kecamatan",
-        locations="kecamatan",
-        color="PEMKWH",
-        mapbox_style="carto-positron",
-        zoom=11, center={"lat": -6.92, "lon": 107.6},
-        opacity=0.5,
-        hover_name="kecamatan",
-        hover_data=["PEMKWH", "RPKWH"],
-    )
-    st.plotly_chart(fig, use_container_width=True)
+    st.set_page_config(layout="wide")
+    st.title("🗺️ Peta Kota Bandung Berdasarkan Unit Layanan Pelanggan (ULP)")
+    
+    # Load geojson yang sudah ditambahkan kolom ULP
+    with open("kecamatan_bandung_ulp.geojson", "r", encoding="utf-8") as f:
+        geojson_data = json.load(f)
+    
+    # Inisialisasi peta
+    m = folium.Map(location=[-6.9, 107.6], zoom_start=11)
+    
+    # Tambahkan layer GeoJSON ke peta
+    folium.GeoJson(
+        geojson_data,
+        name="Kecamatan dan ULP",
+        tooltip=folium.GeoJsonTooltip(
+            fields=["Kecamatan", "ULP"],
+            aliases=["Kecamatan:", "Unit Layanan Pelanggan (ULP):"],
+            sticky=True
+        ),
+        style_function=lambda feature: {
+            'fillColor': '#' + format(hash(feature['properties']['ULP']) % 0xFFFFFF, '06x'),
+            'color': 'black',
+            'weight': 1,
+            'fillOpacity': 0.6
+        }
+    ).add_to(m)
+    
+    folium.LayerControl().add_to(m)
+    folium_static(m, width=1200, height=800)
 
 
 
