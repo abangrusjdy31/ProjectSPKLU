@@ -5,6 +5,12 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 import warnings
 import base64
+import plotly.graph_objects as go
+import folium
+import json
+import plotly.express as px
+from streamlit_folium import folium_static
+from streamlit_folium import st_folium
 from statsmodels.tsa.arima.model import ARIMA
 from streamlit_option_menu import option_menu
 
