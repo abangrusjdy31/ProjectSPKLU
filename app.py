@@ -9,6 +9,7 @@ import plotly.graph_objects as go
 import folium
 import json
 import plotly.express as px
+from folium import Choropleth
 from streamlit_folium import folium_static
 from streamlit_folium import st_folium
 from statsmodels.tsa.arima.model import ARIMA
@@ -199,47 +200,76 @@ if selected == "Menu Utama":
     st.plotly_chart(fig, use_container_width=True)
 
 
-    st.set_page_config(layout="wide")
-    st.title("🗺️ Peta Kota Bandung Berdasarkan Unit Layanan Pelanggan (ULP)")
-    
+
     # Load GeoJSON
-    with open("kecamatan_bandung_ulp.geojson", "r", encoding="utf-8") as f:
+    with open("data/kecamatan_bandung_ulp.geojson", "r", encoding="utf-8") as f:
         geojson_data = json.load(f)
     
-    # Pastikan semua feature punya properti yang diperlukan
-    for feature in geojson_data["features"]:
-        props = feature.get("properties", {})
-        props["Kecamatan"] = props.get("Kecamatan", "Tidak Diketahui")
-        props["ULP"] = props.get("ULP", "Tidak Diketahui")
+    # Mapping ULP ↔ Kecamatan dari geojson
+    ulp_kecamatan_map = pd.DataFrame([
+        {
+            "Kecamatan": feat["properties"].get("Kecamatan", "Tidak Diketahui"),
+            "ULP": feat["properties"].get("ULP", "Tidak Diketahui")
+        }
+        for feat in geojson_data["features"]
+    ]).drop_duplicates()
     
-    # Inisialisasi peta
+    # Gabungkan df transaksi dengan mapping ULP ↔ Kecamatan
+    df_merge = pd.merge(df, ulp_kecamatan_map, how='left', on='ULP')
+    
+    # Group by Kecamatan
+    grouped = df_merge.groupby("Kecamatan").agg({
+        "PEMKWH": "sum",
+        "RPKWH": "sum"
+    }).reset_index()
+    
+    # --- PILIH NILAI YANG INGIN DITAMPILKAN ---
+    indikator = st.selectbox("Pilih indikator yang ingin ditampilkan di peta:", ["Total_KWH", "Total_Pendapatan"])
+    
+    # Sesuaikan nama kolom
+    if indikator == "Total_KWH":
+        grouped.rename(columns={"PEMKWH": "value"}, inplace=True)
+    else:
+        grouped.rename(columns={"RPKWH": "value"}, inplace=True)
+    
+    # Tambahkan field 'value' ke geojson berdasarkan nama Kecamatan
+    for feature in geojson_data["features"]:
+        nama_kec = feature["properties"].get("Kecamatan", "")
+        match = grouped[grouped["Kecamatan"] == nama_kec]
+        if not match.empty:
+            feature["properties"]["value"] = match["value"].values[0]
+        else:
+            feature["properties"]["value"] = 0
+    
+    # Buat map
     m = folium.Map(location=[-6.9, 107.6], zoom_start=11)
     
-    # Buat tooltip aman
-    tooltip = folium.GeoJsonTooltip(
-        fields=["Kecamatan", "ULP"],
-        aliases=["Kecamatan:", "Unit Layanan Pelanggan (ULP):"],
-        localize=True,
-        sticky=True,
-        labels=True,
-        toLocaleString=True
-    )
-    
-    # Tambahkan ke peta
-    folium.GeoJson(
-        geojson_data,
-        name="Kecamatan dan ULP",
-        tooltip=tooltip,
-        style_function=lambda feature: {
-            'fillColor': '#007ACC',
-            'color': 'black',
-            'weight': 1,
-            'fillOpacity': 0.6
-        }
+    # Tambahkan Choropleth
+    Choropleth(
+        geo_data=geojson_data,
+        data=grouped,
+        columns=["Kecamatan", "value"],
+        key_on="feature.properties.Kecamatan",
+        fill_color="Blues",  # otomatis biru muda → biru tua
+        fill_opacity=0.8,
+        line_opacity=0.2,
+        legend_name=f"{indikator} per Kecamatan"
     ).add_to(m)
     
-    folium.LayerControl().add_to(m)
-    folium_static(m, width=1200, height=800)
+    # Tambahkan tooltip
+    folium.GeoJson(
+        geojson_data,
+        name="Kecamatan",
+        tooltip=folium.GeoJsonTooltip(
+            fields=["Kecamatan", "ULP", "value"],
+            aliases=["Kecamatan", "ULP", indikator],
+            localize=True
+        )
+    ).add_to(m)
+    
+    # Tampilkan peta di Streamlit
+    st.subheader("Peta Interaktif Total per Kecamatan")
+    st_folium(m, width=700, height=500)
 
 
 
