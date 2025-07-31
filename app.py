@@ -214,7 +214,7 @@ if selected == "Menu Utama":
         if "ULP" not in feature["properties"]:
             feature["properties"]["ULP"] = "Tidak Diketahui"
 
-    st.subheader(eojson_data["features"][0]["properties"])
+    st.subheader(geojson_data["features"][0]["properties"])
     # Inisialisasi peta
     m = folium.Map(location=[-6.9, 107.6], zoom_start=11)
     
