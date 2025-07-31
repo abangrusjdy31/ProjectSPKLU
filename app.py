@@ -89,13 +89,13 @@ except Exception as e:
     st.stop()
 
 if selected == "Menu Utama":
-    st.title('📊 Dashboard Ringkasan SPKLU')
+    st.title('Dashboard Ringkasan SPKLU')
     st.write("Ringkasan data transaksi SPKLU.")
 
     # 1. Format kolom tanggal dan buat kolom bulan
     df['TANGGAL'] = pd.to_datetime(df['TGL BAYAR'])
     df['BULAN'] = df['TANGGAL'].dt.to_period('M').dt.to_timestamp()
-    
+
     # 2. Ambil daftar bulan unik & urutkan dari terbaru ke terlama
     daftar_bulan = df[['BULAN']].drop_duplicates().sort_values(by='BULAN', ascending=False)
     daftar_bulan_display = daftar_bulan['BULAN'].dt.strftime('%B %Y').tolist()
@@ -131,26 +131,92 @@ if selected == "Menu Utama":
         st.metric("Jumlah Transaksi", total_transaksi)
 
     # -------------------------
-    # 6. Visualisasi Bar KWH dan Pendapatan
-    st.subheader("Total KWH dan Pendapatan per Unit")
-    ranking_unit = df_filter.groupby('UNITUP').agg({'PEMKWH': 'sum', 'RPKWH': 'sum'}).reset_index()
+    st.subheader("Ranking SPKLU Berdasarkan KWH Terjual")
 
-    fig, axes = plt.subplots(1, 2, figsize=(18, 6))
-    sns.barplot(ax=axes[0], x='UNITUP', y='PEMKWH', data=ranking_unit, palette='viridis')
-    axes[0].set_title('Total KWH per Unit')
-    axes[0].set_xlabel('UNITUP')
-    axes[0].set_ylabel('Total KWH')
-    axes[0].tick_params(axis='x', rotation=45)
+    # Ambil data SPKLU dengan total KWH berdasarkan bulan yang dipilih (df_filter)
+    spklu_ranking_kwh = df_filter.groupby('NAMA_SPKLU')['PEMKWH'].sum().reset_index()
+    spklu_ranking_kwh = spklu_ranking_kwh.sort_values(by='PEMKWH', ascending=False)
 
-    sns.barplot(ax=axes[1], x='UNITUP', y='RPKWH', data=ranking_unit, palette='viridis')
-    axes[1].set_title('Total Pendapatan per Unit')
-    axes[1].set_xlabel('UNITUP')
-    axes[1].set_ylabel('Total Pendapatan (IDR)')
-    axes[1].tick_params(axis='x', rotation=45)
+    top_n = 11
+    top_spklu = spklu_ranking_kwh.head(top_n)
 
-    plt.tight_layout()
-    st.pyplot(fig)
-    plt.close(fig)
+    fig = go.Figure(go.Bar(
+        x=top_spklu['PEMKWH'],
+        y=top_spklu['NAMA_SPKLU'],
+        orientation='h',
+        marker=dict(color='#007ACC'),
+        text=top_spklu['PEMKWH'].round(0),
+        textposition='outside',
+        insidetextanchor='start'
+    ))
+
+    fig.update_layout(
+        title=f'Urutan SPKLU berdasarkan KWH Terjual',
+        xaxis_title='Total KWH',
+        yaxis=dict(autorange="reversed"),
+        height=500,
+        plot_bgcolor='#ffffff',
+        paper_bgcolor='#ffffff'
+    )
+
+    st.plotly_chart(fig, use_container_width=True)
+
+ # -------------------------
+    st.subheader("Ranking SPKLU Berdasarkan Pendapatan Terjual")
+
+    # Ambil data SPKLU dengan total KWH berdasarkan bulan yang dipilih (df_filter)
+    spklu_ranking_kwh = df_filter.groupby('NAMA_SPKLU')['RPKWH'].sum().reset_index()
+    spklu_ranking_kwh = spklu_ranking_kwh.sort_values(by='RPKWH', ascending=False)
+
+    top_n = 11
+    top_spklu = spklu_ranking_kwh.head(top_n)
+
+    fig = go.Figure(go.Bar(
+        x=top_spklu['RPKWH'],
+        y=top_spklu['NAMA_SPKLU'],
+        orientation='h',
+        marker=dict(color='#007ACC'),
+        text=top_spklu['RPKWH'].round(0),
+        textposition='outside',
+        insidetextanchor='start'
+    ))
+
+    fig.update_layout(
+        title=f'Urutan SPKLU berdasarkan Pendapatan',
+        xaxis_title='Total Pendapatan',
+        yaxis=dict(autorange="reversed"),
+        height=500,
+        plot_bgcolor='#ffffff',
+        paper_bgcolor='#ffffff'
+    )
+
+    st.plotly_chart(fig, use_container_width=True)
+
+    # Load GeoJSON kecamatan
+    with open("kecamatan_bandung.geojson", "r") as f:
+        geojson = json.load(f)
+
+    # Buat dataframe summary per kecamatan
+    df['Tanggal'] = df['TGL BAYAR'].dt.date
+    ranking = df.groupby('UNITUP').agg({
+        'PEMKWH': 'sum',
+        'RPKWH': 'sum'
+    }).reset_index().rename(columns={'UNITUP': 'kecamatan'})
+
+    # Map visualisasi
+    fig = px.choropleth_mapbox(
+        ranking,
+        geojson=geojson,
+        featureidkey="properties.nama_kecamatan",
+        locations="kecamatan",
+        color="PEMKWH",
+        mapbox_style="carto-positron",
+        zoom=11, center={"lat": -6.92, "lon": 107.6},
+        opacity=0.5,
+        hover_name="kecamatan",
+        hover_data=["PEMKWH", "RPKWH"],
+    )
+    st.plotly_chart(fig, use_container_width=True)
 
 
 
