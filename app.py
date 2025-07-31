@@ -206,6 +206,7 @@ if selected == "Menu Utama":
     # Load GeoJSON
     with open("kecamatan_bandung_ulp.geojson", "r", encoding="utf-8") as f:
         geojson_data = json.load(f)
+        print(geojson_data["features"][0]["properties"])
     
     for feature in geojson_data["features"]:
         if "Kecamatan" not in feature["properties"]:
