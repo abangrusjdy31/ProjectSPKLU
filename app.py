@@ -244,7 +244,6 @@ if selected == "Menu Utama":
 
 
 
-
 elif selected == "Analisis":
     st.title('🔍 Analisis Detail Data SPKLU')
     st.write("Analisis mendalam berdasarkan unit dan SPKLU.")
