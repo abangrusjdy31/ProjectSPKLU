@@ -1,4 +1,3 @@
-
 import streamlit as st
 import pandas as pd
 import matplotlib.pyplot as plt
@@ -9,18 +8,14 @@ import plotly.graph_objects as go
 import folium
 import json
 import plotly.express as px
-from folium import Choropleth
 from streamlit_folium import folium_static
 from streamlit_folium import st_folium
+from folium.plugins import MarkerCluster
 from statsmodels.tsa.arima.model import ARIMA
 from streamlit_option_menu import option_menu
+from sklearn.preprocessing import MinMaxScaler
 
-st.set_page_config(
-    page_title="Dashboard SPKLU",
-    page_icon="logo spklu.png",  # Path ke file
-    layout="wide"
-)
-    
+
 # Optional: use wide layout
 st.set_page_config(layout="wide")
 warnings.filterwarnings("ignore")
@@ -36,7 +31,41 @@ def get_base64_image(image_path):
     return encoded
 
 # Ambil gambar logo dan ubah ke base64
-logo_base64 = get_base64_image("logo spklu.png")
+logo_base64 = get_base64_image("/content/logo spklu.png")
+
+
+# Koordinat bounding box tiap UNITUP (lat_min, lon_min, lat_max, lon_max)
+unitup_bounds = {
+    "5351": {
+        "nama": "Bandung Barat",
+        "bounds": [[-6.95, 107.55], [-6.90, 107.60]]
+    },
+    "53567": {
+        "nama": "Bandung Selatan",
+        "bounds": [[-7.00, 107.60], [-6.95, 107.65]]
+    },
+    "53563": {
+        "nama": "Bandung Timur",
+        "bounds": [[-6.95, 107.70], [-6.90, 107.75]]
+    },
+    "53575": {
+        "nama": "Bandung Utara",
+        "bounds": [[-6.88, 107.60], [-6.83, 107.65]]
+    },
+    "53559": {
+        "nama": "Kopo",
+        "bounds": [[-6.94, 107.58], [-6.89, 107.63]]
+    },
+    "53751": {
+        "nama": "Cijaura",
+        "bounds": [[-6.92, 107.65], [-6.87, 107.70]]
+    },
+    "53555": {
+        "nama": "Ujungberung",
+        "bounds": [[-6.91, 107.73], [-6.86, 107.78]]
+    }
+}
+
 
 
 
@@ -88,7 +117,7 @@ with st.sidebar:
 
 # Load file
 try:
-    df = pd.read_excel('Coba kp.xlsx')
+    df = pd.read_excel('/content/Coba kp.xlsx')
     df['TGL BAYAR'] = pd.to_datetime(df['TGL BAYAR'], format='%d/%m/%Y', errors='coerce')
     df['Efisiensi'] = df['RPKWH'] / df['PEMKWH']
 except Exception as e:
@@ -97,7 +126,7 @@ except Exception as e:
 
 if selected == "Menu Utama":
     st.title('Dashboard Ringkasan SPKLU')
-    st.write("Ringkasan data transaksi SPKLU.")
+    st.write("Ringkasan data transaksi SPKLU di Kota Bandung Raya")
 
     # 1. Format kolom tanggal dan buat kolom bulan
     df['TANGGAL'] = pd.to_datetime(df['TGL BAYAR'])
@@ -120,31 +149,99 @@ if selected == "Menu Utama":
     # -------------------------
     # 4. Pratinjau Data
     st.subheader("Pratinjau Data")
-    st.dataframe(df_filter.head())
 
+    # Pilih dan ubah nama kolom
+    selected_columns = ['UNITUP', 'NAMA_SPKLU', 'PEMKWH', 'RP PERKWH', 'RPKWH', 'RPTOTAL']
+
+    # Alias kolom
+    column_alias = {
+        'UNITUP': 'Unit',
+        'NAMA_SPKLU': 'Nama SPKLU',
+        'PEMKWH': 'Jumlah kWh',
+        'RP PERKWH': 'Harga per kWh',
+        'RPKWH': 'Total Biaya',
+        'RPTOTAL': 'Total Biaya + PPN'
+    }
+
+    # Terapkan alias dan tampilkan tanpa index
+    df_display = df_filter[selected_columns].rename(columns=column_alias)
+    st.dataframe(df_display.reset_index(drop=True), height=200, hide_index=True)
+
+    
+    
     # -------------------------
     # 5. Ringkasan Statistik
     total_kwh = df_filter['PEMKWH'].sum()
-    total_income = df_filter['RPKWH'].sum()
+    total_income = df_filter['RPKWH'].sum() 
     total_transaksi = df_filter['No'].nunique()
 
+    # Tambahkan <br> sebagai spasi atas
+    st.markdown("<br>", unsafe_allow_html=True)
+
     st.subheader("Ringkasan Statistik")
-    col1, col2, col3 = st.columns(3)
-    with col1:
-        st.metric("Total KWH Terjual", f"{total_kwh:,.2f}")
-    with col2:
-        st.metric("Total Pendapatan", f"Rp{total_income:,.2f}")
-    with col3:
-        st.metric("Jumlah Transaksi", total_transaksi)
+
+    # Custom CSS
+    st.markdown("""
+        <style>
+        .metric-container {
+            display: flex;
+            justify-content: space-between;
+            gap: 10px;
+        }
+        .metric-box {
+            flex: 1;
+            border: 2px solid #e6e6e6;
+            border-radius: 10px;
+            padding: 20px;
+            text-align: center;
+            background-color: #f9f9f9;
+        }
+        .metric-box.wide {
+            flex: 1.5;
+        }
+        .metric-label {
+            font-weight: bold;
+            font-size: 24px;
+            margin-bottom: -5px;
+        }
+        .metric-value {
+            font-size: 24px;
+            color: #333;
+        }
+        </style>
+    """, unsafe_allow_html=True)
+
+    # Display metrics using HTML
+    st.markdown(f"""
+        <div class="metric-container">
+            <div class="metric-box">
+                <div class="metric-label">Total KWH Terjual</div>
+                <div class="metric-value">{total_kwh:,.0f}</div>
+            </div>
+            <div class="metric-box wide">
+                <div class="metric-label">Total Pendapatan</div>
+                <div class="metric-value">Rp{total_income:,.0f}</div>
+            </div>
+            <div class="metric-box">
+                <div class="metric-label">Jumlah Transaksi</div>
+                <div class="metric-value">{total_transaksi}</div>
+            </div>
+        </div>
+    """, unsafe_allow_html=True)
+
 
     # -------------------------
+    
+    
+    # Tambahkan <br> sebagai spasi atas
+    st.markdown("<br>", unsafe_allow_html=True)
     st.subheader("Ranking SPKLU Berdasarkan KWH Terjual")
 
     # Ambil data SPKLU dengan total KWH berdasarkan bulan yang dipilih (df_filter)
     spklu_ranking_kwh = df_filter.groupby('NAMA_SPKLU')['PEMKWH'].sum().reset_index()
     spklu_ranking_kwh = spklu_ranking_kwh.sort_values(by='PEMKWH', ascending=False)
 
-    top_n = 11
+    top_n = 10
     top_spklu = spklu_ranking_kwh.head(top_n)
 
     fig = go.Figure(go.Bar(
@@ -158,7 +255,7 @@ if selected == "Menu Utama":
     ))
 
     fig.update_layout(
-        title=f'Urutan SPKLU berdasarkan KWH Terjual',
+        title=f'Urutan SPKLU berdasarkan Total KWH Terjual',
         xaxis_title='Total KWH',
         yaxis=dict(autorange="reversed"),
         height=500,
@@ -175,7 +272,7 @@ if selected == "Menu Utama":
     spklu_ranking_kwh = df_filter.groupby('NAMA_SPKLU')['RPKWH'].sum().reset_index()
     spklu_ranking_kwh = spklu_ranking_kwh.sort_values(by='RPKWH', ascending=False)
 
-    top_n = 11
+    top_n = 10
     top_spklu = spklu_ranking_kwh.head(top_n)
 
     fig = go.Figure(go.Bar(
@@ -189,7 +286,7 @@ if selected == "Menu Utama":
     ))
 
     fig.update_layout(
-        title=f'Urutan SPKLU berdasarkan Pendapatan',
+        title=f'Urutan SPKLU berdasarkan Total Pendapatan',
         xaxis_title='Total Pendapatan',
         yaxis=dict(autorange="reversed"),
         height=500,
@@ -199,78 +296,149 @@ if selected == "Menu Utama":
 
     st.plotly_chart(fig, use_container_width=True)
 
+#-----------------------------------
 
-    st.set_page_config(layout="wide")   
-    st.title("🗺️ Peta Kota Bandung Berdasarkan Unit Layanan Pelanggan (ULP)")
-    
-    # Load GeoJSON
-    with open("kecamatan_bandung_ulp.geojson", "r", encoding="utf-8") as f:
-        geojson_data = json.load(f)
-        
-    
-    for feature in geojson_data["features"]:
-        if "nama_kecamatan" not in feature["properties"]:
-            feature["properties"]["nama_kecamatan"] = "Tidak Diketahui"
-        if "ULP" not in feature["properties"]:
-            feature["properties"]["ULP"] = "Tidak Diketahui"
+     # -------------------------
+    st.subheader("Ranking SPKLU Berdasarkan Jumlah Transaksi")
 
-    st.subheader(geojson_data["features"][0]["properties"])
-    # Inisialisasi peta
-    m = folium.Map(location=[-6.9, 107.6], zoom_start=11)
-    
-    # Buat tooltip aman
-    tooltip = folium.GeoJsonTooltip(
-        fields=["nama_kecamatan", "ULP"],
-        aliases=["Kecamatan:", "Unit Layanan Pelanggan (ULP):"],
-        localize=True,
-        sticky=True,
-        labels=True,
-        toLocaleString=True
+    # Hitung jumlah transaksi untuk setiap SPKLU
+    spklurank_transaksi = df_filter.groupby('NAMA_SPKLU').size().reset_index(name='JUMLAH_TRANSAKSI')
+
+    # Urutkan dari yang terbesar
+    spklurank_transaksi = spklurank_transaksi.sort_values(by='JUMLAH_TRANSAKSI', ascending=False)
+
+    # Ambil 10 SPKLU teratas
+    top_n = 10
+    top_spklu = spklurank_transaksi.head(top_n)
+
+    # Plot horizontal bar chart
+    fig = go.Figure(go.Bar(
+        x=top_spklu['JUMLAH_TRANSAKSI'],
+        y=top_spklu['NAMA_SPKLU'],
+        orientation='h',
+        marker=dict(color='#007ACC'),
+        text=top_spklu['JUMLAH_TRANSAKSI'],
+        textposition='outside',
+        insidetextanchor='start'
+    ))
+
+    fig.update_layout(
+        title='Urutan SPKLU berdasarkan Jumlah Transaksi',
+        xaxis_title='Jumlah Transaksi',
+        yaxis=dict(autorange="reversed"),
+        height=500,
+        plot_bgcolor='#ffffff',
+        paper_bgcolor='#ffffff'
     )
-    
-    # Tambahkan ke peta
-    folium.GeoJson(
-        geojson_data,
-        name="Kecamatan dan ULP",
-        tooltip=tooltip,
-        style_function=lambda feature: {
-            'fillColor': '#007ACC',
-            'color': 'black',
-            'weight': 1,
-            'fillOpacity': 0.6
-        }
-    ).add_to(m)
-    
-    folium.LayerControl().add_to(m)
-    folium_static(m, width=1200, height=800)
+
+    st.plotly_chart(fig, use_container_width=True)
+
+#--------------------------
+
+    # Judul
+    st.title("Peta Lokasi SPKLU di Bandung")
+
+    # Data lokasi SPKLU
+    spklu_locations = [
+        ["SPKLU PLN UP3 BANDUNG", -6.948691482456584, 107.61219619688617],
+        ["SPKLU PLN ULP BANDUNG UTARA", -6.920962, 107.608129],
+        ["SPKLU PLN ULP BANDUNG BARAT", -6.933869, 107.57143],
+        ["SPKLU PLN ULP BANDUNG TIMUR", -6.899030, 107.641179],
+        ["SPKLU PLN ULP CIJAWURA", -6.898929, 107.641115],
+        ["SPKLU PLN ULP UJUNGBERUNG", -6.2528476, 107.0104015],
+        ["SPKLU PLN ULP KOPO", -6.954014, 107.640576],
+        ["SPKLU PLN TRANS STUDIO MALL BANDUNG", -6.9254, 107.6365],
+        ["SPKLU PLN UID JAWA BARAT", -6.919962, 107.60901],
+        ["SPKLU POLDA JABAR", -6.936625, 107.7033697],
+        ["SPKLU PLN ICON HUB (BRAGA HERITAGE)", -6.9199358706829255, 107.6098682273523],
+        ["SPKLU PLN UIP JBT", -6.938285, 107.627942],
+        ["SPKLU (ARISTA POWER) BYD BANDUNG", -6.93866, 107.6759],
+        ["SPKLU PLN GEOWISATA INN", -6.91758, 107.57838],
+    ]
+
+    # Buat DataFrame dari lokasi SPKLU
+    df_lokasi = pd.DataFrame(spklu_locations, columns=["NAMA_SPKLU", "LAT", "LON"])
+
+    # Buat ringkasan data per SPKLU
+    summary = df_filter.groupby('NAMA_SPKLU').agg({
+        'No': 'count',
+        'PEMKWH': 'sum',
+        'RPKWH': 'sum'
+    }).reset_index().rename(columns={
+        'No': 'Jumlah Transaksi',
+        'PEMKWH': 'Total kWh',
+        'RPKWH': 'Total Pendapatan'
+    })
+
+    # Gabungkan lokasi dan data summary
+    df_map = pd.merge(df_lokasi, summary, on="NAMA_SPKLU", how="left")
+
+    # Isi NaN dengan 0 agar tetap ditampilkan
+    df_map[['Jumlah Transaksi', 'Total kWh', 'Total Pendapatan']] = df_map[[
+        'Jumlah Transaksi', 'Total kWh', 'Total Pendapatan'
+    ]].fillna(0)
+
+    # Inisialisasi peta
+    m = folium.Map(location=[-6.92, 107.62], zoom_start=12)
+    marker_cluster = MarkerCluster().add_to(m)
+
+    # Tambahkan marker
+    for _, row in df_map.iterrows():
+        popup_html = f"""
+        <div style="font-family: Arial; font-size: 13px; line-height: 1.5">
+            <strong>{row['NAMA_SPKLU']}</strong><br>
+            Bulan : {pilihan_bulan_display}<br><br>
+            <table style="width: 250px">
+                <tr><td>🔁 Jumlah Transaksi:</td><td><strong>{int(row['Jumlah Transaksi']):,}</strong></td></tr>
+                <tr><td>⚡ Total kWh:</td><td><strong>{row['Total kWh']:.0f}</strong></td></tr>
+                <tr><td>💰 Total Pendapatan:</td><td><strong>Rp {row['Total Pendapatan']:,.0f}</strong></td></tr>
+            </table>
+        </div>
+        """
+
+        folium.Marker(
+            location=[row['LAT'], row['LON']],
+            popup=folium.Popup(popup_html, max_width=300),
+            tooltip=row['NAMA_SPKLU'],
+            icon=folium.Icon(color="green", icon="bolt", prefix="fa")
+        ).add_to(marker_cluster)
+
+    # Tampilkan peta di Streamlit
+    folium_static(m, width=1100, height=700)
+
+
+
 
 
 
 elif selected == "Analisis":
-    st.title('🔍 Analisis Detail Data SPKLU')
-    st.write("Analisis mendalam berdasarkan unit dan SPKLU.")
+    st.title('Analisis Detail Data SPKLU')
+    st.write("Analisis mendalam SPKLU")
 
     # Analisis per UNITUP yang spesifik
     st.subheader('Analisis Transaksi per SPKLU dalam Unit Tertentu')
-    selected_unit_analysis = st.selectbox('Pilih UNITUP untuk Analisis Detail', df['UNITUP'].unique())
+    selected_unit_analysis = st.selectbox('Pilih UNIT', df['UNITUP'].unique())
 
     if selected_unit_analysis:
         df_unit_analysis = df[df['UNITUP'] == selected_unit_analysis]
         spklu_unit_analysis = df_unit_analysis.groupby('NAMA_SPKLU')['No'].nunique().reset_index()
-        spklu_unit_analysis = spklu_unit_analysis.sort_values(by='No', ascending=False).rename(columns={'No': 'jumlah_transaksi'})
-        st.write(f'Jumlah Transaksi per SPKLU di UNITUP {selected_unit_analysis}:')
-        st.dataframe(spklu_unit_analysis)
+        spklu_unit_analysis = spklu_unit_analysis.sort_values(by='No', ascending=False).rename(columns={'No': 'Jumlah Transaksi', 'NAMA_SPKLU': 'SPKLU'})
+        st.write(f'Jumlah Transaksi SPKLU di UNIT {selected_unit_analysis}:')
+        st.dataframe(spklu_unit_analysis, use_container_width=True, hide_index=True)
 
-        # Visualisasi transaksi per SPKLU di unit yang dipilih
-        fig, ax = plt.subplots(figsize=(12, 7))
-        sns.barplot(x='NAMA_SPKLU', y='jumlah_transaksi', data=spklu_unit_analysis, ax=ax, palette='viridis')
-        ax.set_title(f'Jumlah Transaksi per SPKLU di UNITUP {selected_unit_analysis}')
-        ax.set_xlabel('NAMA SPKLU')
-        ax.set_ylabel('Jumlah Transaksi')
-        plt.xticks(rotation=90)
-        plt.tight_layout()
-        st.pyplot(fig)
-        plt.close(fig)
+        # Donut Chart
+    fig = go.Figure(data=[go.Pie(
+        labels=spklu_unit_analysis['SPKLU'],
+        values=spklu_unit_analysis['Jumlah Transaksi'],
+        hole=0.4,  # Donut style
+        marker=dict(colors=px.colors.qualitative.Vivid),
+        textinfo='percent',
+        hoverinfo='label+value'
+    )])
+
+    st.plotly_chart(fig, use_container_width=True)
+
+
 
     st.subheader('Ranking SPKLU Berdasarkan Total KWH dan Pendapatan')
     spklu_summary = df.groupby('NAMA_SPKLU').agg({
@@ -445,6 +613,5 @@ elif selected == "Tentang":
 
     st.write("""
     ### 📁 Sumber Data:
-    Data berasal dari file Excel: Rincian SPKLU Bulan Juni 2025
+    Data berasal dari Penjualan SPKLU di kota Bandung selama Bulan Juni 2024 - Juni 2025
     """)
-
