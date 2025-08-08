@@ -31,7 +31,7 @@ def get_base64_image(image_path):
     return encoded
 
 # Ambil gambar logo dan ubah ke base64
-logo_base64 = get_base64_image("/content/logo spklu.png")
+logo_base64 = get_base64_image("logo spklu.png")
 
 
 # Koordinat bounding box tiap UNITUP (lat_min, lon_min, lat_max, lon_max)
