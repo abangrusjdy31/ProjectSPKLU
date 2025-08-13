@@ -170,79 +170,80 @@ if selected == "Menu Utama":
     
     
     # -------------------------
-    # 5. Ringkasan Statistik
-        total_kwh = df_filter['PEMKWH'].sum()
-        total_income = df_filter['RPKWH'].sum()
-        total_transaksi = df_filter['No'].nunique()
-        
-        # Spasi atas
-        st.markdown("<br>", unsafe_allow_html=True)
-        
-        st.subheader("Ringkasan Statistik")
-        
-        # CSS Responsive
-        st.markdown("""
-            <style>
+    # 5. Ringkasan Statistik       
+    total_kwh = df_filter['PEMKWH'].sum()
+    total_income = df_filter['RPKWH'].sum()
+    total_transaksi = df_filter['No'].nunique()
+    
+    # Spasi atas
+    st.markdown("<br>", unsafe_allow_html=True)
+    
+    st.subheader("Ringkasan Statistik")
+    
+    # CSS Responsive
+    st.markdown("""
+        <style>
+        .metric-container {
+            display: flex;
+            justify-content: space-between;
+            gap: 10px;
+            flex-wrap: wrap; /* supaya bisa turun kalau layar kecil */
+        }
+        .metric-box {
+            flex: 1;
+            min-width: 200px; /* batas minimum ukuran kotak */
+            border: 2px solid #e6e6e6;
+            border-radius: 10px;
+            padding: 20px;
+            text-align: center;
+            background-color: #f9f9f9;
+            box-sizing: border-box;
+        }
+        .metric-box.wide {
+            flex: 1.5;
+        }
+        .metric-label {
+            font-weight: bold;
+            font-size: 22px;
+            margin-bottom: -5px;
+            word-wrap: break-word;
+        }
+        .metric-value {
+            font-size: 22px;
+            color: #333;
+        }
+    
+        /* Responsif untuk layar kecil */
+        @media (max-width: 768px) {
             .metric-container {
-                display: flex;
-                justify-content: space-between;
-                gap: 10px;
-                flex-wrap: wrap; /* supaya bisa turun kalau layar kecil */
+                flex-direction: column;
+                align-items: stretch;
             }
             .metric-box {
-                flex: 1;
-                min-width: 200px; /* batas minimum ukuran kotak */
-                border: 2px solid #e6e6e6;
-                border-radius: 10px;
-                padding: 20px;
-                text-align: center;
-                background-color: #f9f9f9;
-                box-sizing: border-box;
+                width: 100%;
             }
-            .metric-box.wide {
-                flex: 1.5;
-            }
-            .metric-label {
-                font-weight: bold;
-                font-size: 22px;
-                margin-bottom: -5px;
-                word-wrap: break-word;
-            }
-            .metric-value {
-                font-size: 22px;
-                color: #333;
-            }
-        
-            /* Responsif untuk layar kecil */
-            @media (max-width: 768px) {
-                .metric-container {
-                    flex-direction: column;
-                    align-items: stretch;
-                }
-                .metric-box {
-                    width: 100%;
-                }
-            }
-            </style>
-        """, unsafe_allow_html=True)
-        
-        # Display metrics
-        st.markdown(f"""
-            <div class="metric-container">
-                <div class="metric-box">
-                    <div class="metric-label">Total KWH Terjual</div>
-                    <div class="metric-value">{total_kwh:,.0f}</div>
-                </div>
-                <div class="metric-box wide">
-                    <div class="metric-label">Total Pendapatan</div>
-                    <div class="metric-value">Rp{total_income:,.0f}</div>
-                </div>
-                <div class="metric-box">
-                    <div class="metric-label">Jumlah Transaksi</div>
-                    <div class="metric-value">{total_transaksi}</div>
-                </div>
+        }
+        </style>
+    """, unsafe_allow_html=True)
+    
+    # Display metrics
+    st.markdown(f"""
+        <div class="metric-container">
+            <div class="metric-box">
+                <div class="metric-label">Total KWH Terjual</div>
+                <div class="metric-value">{total_kwh:,.0f}</div>
             </div>
-        """, unsafe_allow_html=True)
+            <div class="metric-box wide">
+                <div class="metric-label">Total Pendapatan</div>
+                <div class="metric-value">Rp{total_income:,.0f}</div>
+            </div>
+            <div class="metric-box">
+                <div class="metric-label">Jumlah Transaksi</div>
+                <div class="metric-value">{total_transaksi}</div>
+            </div>
+        </div>
+    """, unsafe_allow_html=True)
+
 
 
 
