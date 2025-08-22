@@ -117,7 +117,9 @@ with st.sidebar:
 
 # Load file
 try:
-    df = pd.read_excel('Coba kp.xlsx')
+    #df = pd.read_excel('Coba kp.xlsx')
+    url_data3 = "https://docs.google.com/spreadsheets/d/16cyvXwvucVb7EM1qiikZpbK8J8isbktuiw-MR1EJDEY/export?format=csv&gid=1874488223"
+    df = pd.read_csv(url_data3)
     df['TGL BAYAR'] = pd.to_datetime(df['TGL BAYAR'], format='%d/%m/%Y', errors='coerce')
     df['Efisiensi'] = df['RPKWH'] / df['PEMKWH']
 except Exception as e:
