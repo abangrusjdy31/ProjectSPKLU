@@ -1,3 +1,13 @@
+import pandas as pd
+import streamlit as st
+import matplotlib.pyplot as plt
+import warnings
+import base64
+import folium
+from folium.plugins import MarkerCluster
+from streamlit_folium import folium_static
+from streamlit_option_menu import option_menu
+
 # Optional: use wide layout
 st.set_page_config(layout="wide")
 warnings.filterwarnings("ignore")
