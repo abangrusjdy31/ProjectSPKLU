@@ -488,7 +488,7 @@ elif selected == "Analisis":
     # Tab 4 - Kapasitas & Kategori
     # ============================
     with tab4:
-        st.subheader("⚡ Kapasitas & Kategori SPKLU")
+        st.subheader("Kapasitas & Kategori SPKLU")
         # --- Agregasi df2: transaksi per SPKLU ---
         df2_agg = df2.groupby("Nama SPKLU")[["Jumlah Transaksi", "Jumlah KWH", "Total Pendapatan"]].sum().reset_index()
 
@@ -618,10 +618,11 @@ elif selected == "Analisis":
 
         col1, col2 = st.columns(2)
 
+
         with col1:
             import plotly.express as px
+            kategori_order = ["Standar", "Medium", "Fast", "Ultra Fast"]
 
-            # Bar Chart Kapasitas per Kategori
             fig_bar = px.bar(
                 df_selected,
                 x="Kategori",
@@ -629,35 +630,63 @@ elif selected == "Analisis":
                 color="Kategori",
                 text="Kapasitas",
                 title=f"Kapasitas per Kategori - {selected_spklu}",
-                color_discrete_sequence=px.colors.qualitative.Set2
+                color_discrete_sequence=px.colors.qualitative.Set2,
+                category_orders={"Kategori": kategori_order}
             )
-            fig_bar.update_traces(textposition="outside")
+
+            # Tambahkan ruang di atas batang agar label tidak kepotong
+            max_val = df_selected["Kapasitas"].max()
+            fig_bar.update_yaxes(range=[0, max_val * 1.25])  # 25% padding atas
+
+            # Atur margin frame
+            fig_bar.update_layout(margin=dict(t=60, b=40, l=40, r=40))
+
+            # Teks di atas batang
+            fig_bar.update_traces(textposition="outside", textfont_size=12)
+
             st.plotly_chart(fig_bar, use_container_width=True)
 
         with col2:
-            import matplotlib.pyplot as plt
+            import plotly.graph_objects as go
 
-            # Donut Chart Kapasitas per Kategori
-            fig, ax = plt.subplots()
-            kapasitas_per_kategori = df_selected.groupby("Kategori")["Kapasitas"].sum()
-            wedges, texts, autotexts = ax.pie(
-                kapasitas_per_kategori,
-                labels=kapasitas_per_kategori.index,
-                autopct='%1.1f%%',
-                startangle=90,
-                wedgeprops=dict(width=0.4)
+            # Hitung jumlah unit per kategori
+            unit_per_kategori = df_selected["Kategori"].value_counts()
+
+            # Hitung total kapasitas (untuk teks tengah)
+            total_kapasitas = df_selected["Kapasitas"].sum()
+
+            # Buat Donut Chart
+            fig = go.Figure(data=[go.Pie(
+                labels=unit_per_kategori.index,
+                values=unit_per_kategori.values,
+                hole=0.4,
+                textinfo='percent',
+                texttemplate='<br>%{percent:.1%}',  # tidak menampilkan jumlah unit
+                insidetextfont=dict(color="black")
+            )])
+
+            # Tambahkan total kapasitas di tengah
+            fig.add_annotation(
+                text=f"<b>Total<br>{int(total_kapasitas)} kW</b>",  # tetap kapasitas
+                x=0.5, y=0.5,
+                font=dict(size=14, color="black"),
+                showarrow=False
             )
-            ax.text(0, 0, f"Total\\n{kapasitas_per_kategori.sum()} kW",
-                    ha='center', va='center', fontsize=12, fontweight='bold')
-            ax.set_title(f"Proporsi Kapasitas - {selected_spklu}")
-            st.pyplot(fig)
 
+            # Layout
+            fig.update_layout(
+                title_text=f"Proporsi Kategori Charger - {selected_spklu}",
+                title_x=0.5,
+                margin=dict(l=10, r=10, t=40, b=10)
+            )
+
+            st.plotly_chart(fig, use_container_width=True)
     # ============================
     # Tab 5 - Level Spklu (Klustering berdasarkan level banyak jumlah transaksi)
     # ============================
     with tab5:
         # --- Klustering SPKLU ---
-        st.subheader("Klustering SPKLU (Transaksi, kWh, Pendapatan)")
+        st.subheader("Klustering SPKLU")
 
         # --- Persiapan data ---
         fitur_group = df2.groupby("Nama SPKLU")[["Jumlah Transaksi", "Jumlah KWH", "Total Pendapatan"]].sum().reset_index()
@@ -674,315 +703,115 @@ elif selected == "Analisis":
         mapping = {cluster_order[0]: "Rendah", cluster_order[1]: "Sedang", cluster_order[2]: "Tinggi"}
         fitur_group["Level"] = fitur_group["Cluster"].map(mapping)
 
-        # --- Radio Option ---
-        menu = st.radio(
-            "Pilih Faktor Atribut:",
-            ["Transaksi, kWh, Pendapatan", "+ Kapasitas dan Kategori"],
-            horizontal=True
-        )
-        if menu == "Transaksi, kWh, Pendapatan":
-            # === Bagian Rekomendasi (kotak kotak per level) ===
-            rekomendasi = {
-                "Tinggi": "SPKLU ini ramai digunakan. Tambah unit charger, upgrade kapasitas, atau buka cabang di lokasi serupa.",
-                "Sedang": "SPKLU memiliki potensi. Dorong dengan promosi, kerjasama merchant, atau peningkatan fasilitas.",
-                "Rendah": "SPKLU relatif sepi. Evaluasi lokasi, cek teknis, atau strategi marketing. Jika tetap rendah, pertimbangkan relokasi."
-            }
+        # === Bagian Rekomendasi (kotak kotak per level) ===
+        rekomendasi = {
+            "Tinggi": "SPKLU ini ramai digunakan. Tambah unit charger, upgrade kapasitas, atau buka cabang di lokasi serupa.",
+            "Sedang": "SPKLU memiliki potensi. Dorong dengan promosi, kerjasama merchant, atau peningkatan fasilitas.",
+            "Rendah": "SPKLU relatif sepi. Evaluasi lokasi, cek teknis, atau strategi marketing. Jika tetap rendah, pertimbangkan relokasi."
+        }
 
-            df_tinggi = fitur_group.query("Level == 'Tinggi'").sort_values("Total Pendapatan", ascending=False)
-            df_sedang = fitur_group.query("Level == 'Sedang'").sort_values("Total Pendapatan", ascending=False)
-            df_rendah = fitur_group.query("Level == 'Rendah'").sort_values("Total Pendapatan", ascending=False)
-            tinggi = df_tinggi["Nama SPKLU"].tolist()
-            sedang = df_sedang["Nama SPKLU"].tolist()
-            rendah = df_rendah["Nama SPKLU"].tolist()
+        df_tinggi = fitur_group.query("Level == 'Tinggi'").sort_values("Total Pendapatan", ascending=False)
+        df_sedang = fitur_group.query("Level == 'Sedang'").sort_values("Total Pendapatan", ascending=False)
+        df_rendah = fitur_group.query("Level == 'Rendah'").sort_values("Total Pendapatan", ascending=False)
+        tinggi = df_tinggi["Nama SPKLU"].tolist()
+        sedang = df_sedang["Nama SPKLU"].tolist()
+        rendah = df_rendah["Nama SPKLU"].tolist()
 
-            col1, col2, col3 = st.columns(3)
+        col1, col2, col3 = st.columns(3)
 
-            def buat_kotak(judul, data):
-                with st.container():
-                    st.markdown(f"### {judul}")
-                    st.markdown(
-                        f"""
-                        <div style="border:1px solid #ddd; border-radius:10px; padding:10px;
-                                    max-height:200px; overflow-y:auto; background-color:#f5f5f5; margin-bottom:15px;">
-                            {"".join([f"<p style='margin:5px 0;'>{item}</p>" for item in data])}
-                        </div>
-                        <p style='font-weight:bold; margin-top:5px;'>
-                            Jumlah Unit: {len(data)}
-                        </p>
-                        """,
-                        unsafe_allow_html=True
-                    )
-
-            with col1:
-                buat_kotak("Tinggi", tinggi)
-
-            with col2:
-                buat_kotak("Sedang", sedang)
-
-            with col3:
-                buat_kotak("Rendah", rendah)
-
-            st.markdown("---")
-
-            # === Layout Bawah: Scatter kiri & Pie kanan ===
-            col_left, col_right = st.columns([2, 1])  # scatter lebih lebar
-
-            with col_left:
-                import plotly.express as px
-                label_map = {
-                    "Tinggi": "Intensitas Tinggi (ramai digunakan)",
-                    "Sedang": "Intensitas Sedang (potensial berkembang)",
-                    "Rendah": "Intensitas Rendah (sepi penggunaan)"
-                }
-                fitur_group["Level Deskriptif"] = fitur_group["Level"].map(label_map)
-
-                fig1 = px.scatter(
-                    fitur_group,
-                    x="Jumlah Transaksi",
-                    y="Jumlah KWH",
-                    size="Total Pendapatan",
-                    color="Level Deskriptif",
-                    hover_data=["Nama SPKLU"],
-                    color_discrete_map={
-                        "Intensitas Rendah (sepi penggunaan)": "lightcoral",
-                        "Intensitas Sedang (potensial berkembang)": "gold",
-                        "Intensitas Tinggi (ramai digunakan)": "seagreen"
-                    },
-                    category_orders={"Level Deskriptif": [
-                        "Intensitas Tinggi (ramai digunakan)",
-                        "Intensitas Sedang (potensial berkembang)",
-                        "Intensitas Rendah (sepi penggunaan)"]
-                    }
-                )
-                st.plotly_chart(fig1, use_container_width=True, key="scatter_plot")
-
-            with col_right:
-                import matplotlib.pyplot as plt
-                fig2, ax2 = plt.subplots()
-                level_count = fitur_group["Level"].value_counts()
-
-                wedges, texts, autotexts = ax2.pie(
-                    level_count,
-                    labels=level_count.index,
-                    autopct='%1.1f%%',
-                    colors=["lightcoral", "gold", "seagreen"],
-                    startangle=90,
-                    wedgeprops=dict(width=0.4)  # donut
+        def buat_kotak(judul, data):
+            with st.container():
+                st.markdown(f"### {judul}")
+                st.markdown(
+                    f"""
+                    <div style="border:1px solid #ddd; border-radius:10px; padding:10px;
+                                max-height:200px; overflow-y:auto; background-color:#f5f5f5; margin-bottom:15px;">
+                        {"".join([f"<p style='margin:5px 0;'>{item}</p>" for item in data])}
+                    </div>
+                    <p style='font-weight:bold; margin-top:5px;'>
+                        Jumlah Unit: {len(data)}
+                    </p>
+                    """,
+                    unsafe_allow_html=True
                 )
 
-                ax2.text(0, 0, "Total\\n" + str(level_count.sum()), ha='center', va='center', fontsize=12, fontweight='bold')
-                ax2.set_title("Proporsi SPKLU per Level")
-                st.pyplot(fig2)
+        with col1:
+            buat_kotak("Tinggi", tinggi)
 
-        elif menu == "+ Kapasitas dan Kategori":
-            # --- Agregasi df2: transaksi per SPKLU ---
-            df2_agg = df2.groupby("Nama SPKLU")[["Jumlah Transaksi", "Jumlah KWH", "Total Pendapatan"]].sum().reset_index()
+        with col2:
+            buat_kotak("Sedang", sedang)
 
-            # --- Agregasi df4: kapasitas max, rata-rata, jumlah tipe, dan kategori tertinggi ---
-            # --- Cleaning kolom Kapasitas jadi numerik ---
-            df4["Kapasitas"] = pd.to_numeric(
-                df4["Kapasitas"]
-                    .astype(str)
-                    .str.replace("kW", "", regex=False)
-                    .str.replace("KW", "", regex=False)
-                    .str.replace(",", "", regex=False)
-                    .str.extract(r"(\d+)")[0],  # ambil hanya angka
-                errors="coerce"
-            )
-            # Mapping ranking kategori
-            kategori_rank = {
-                "Ultra Fast Charging": 3,
-                "Fast Charging": 2,
-                "Medium Charging": 1,
-                "Slow Charging": 0
-            }
-            def pilih_kategori(x):
-                # Buang NaN
-                x = x.dropna()
-                if x.empty:
-                    return "Unknown"
+        with col3:
+            buat_kotak("Rendah", rendah)
 
-                # Map rank hanya yg valid
-                ranks = x.map(kategori_rank).fillna(0)
+        st.markdown("---")
 
-                # Ambil kategori dengan rank tertinggi
-                best_idx = ranks.idxmax()
-                return x.loc[best_idx]
+        # === Layout Bawah: Scatter kiri & Pie kanan ===
+        col_left, col_right = st.columns([2, 1])  # scatter lebih lebar
 
-            df4_agg = df4.groupby("Nama SPKLU").agg({
-                # kapasitas: total + variasi
-                "Kapasitas": ["max", "mean", lambda x: x.nunique()],
-                # kategori: ambil tertinggi
-                "Kategori": pilih_kategori
-            }).reset_index()
-
-            # rename kolom multiindex
-            df4_agg.columns = ["Nama SPKLU", "Kapasitas_Max", "Kapasitas_Mean", "Jumlah_Tipe", "Kategori"]
-            df4_agg = df4_agg.dropna(subset=["Kapasitas_Max", "Kapasitas_Mean"])
-
-            # --- Gabungkan df2 + df4 ---
-            df_merged = pd.merge(df2_agg, df4_agg, on="Nama SPKLU", how="left")
-
-            # --- One-hot encoding kategori ---
-            df_encoded = pd.get_dummies(df_merged, columns=["Kategori"])
-
-            # --- Pilih fitur untuk clustering ---
-            features = [
-                "Jumlah Transaksi",
-                "Jumlah KWH",
-                "Total Pendapatan",
-                "Kapasitas_Max",
-                "Kapasitas_Mean",
-                "Jumlah_Tipe"
-            ] + [col for col in df_encoded.columns if "Kategori_" in col]
-
-            # --- Standardisasi ---
-            from sklearn.preprocessing import StandardScaler
-            scaler = StandardScaler()
-            X_scaled = scaler.fit_transform(df_encoded[features].fillna(0))
-
-            # --- K-Means ---
-            from sklearn.cluster import KMeans
-            kmeans = KMeans(n_clusters=3, random_state=42, n_init=10)
-            df_encoded["Cluster"] = kmeans.fit_predict(X_scaled)
-
-            # Mapping cluster berdasarkan rata-rata pendapatan
-            cluster_order = df_encoded.groupby("Cluster")["Total Pendapatan"].mean().sort_values().index
-            mapping = {cluster_order[0]: "Rendah", cluster_order[1]: "Sedang", cluster_order[2]: "Tinggi"}
-            df_encoded["Level"] = df_encoded["Cluster"].map(mapping)
-
-            # --- Output ---
-            # === Bagian Rekomendasi (kotak kotak per level) ===
-            rekomendasi = {
-                "Tinggi": "SPKLU ini ramai digunakan. Tambah unit charger, upgrade kapasitas, atau buka cabang di lokasi serupa.",
-                "Sedang": "SPKLU memiliki potensi. Dorong dengan promosi, kerjasama merchant, atau peningkatan fasilitas.",
-                "Rendah": "SPKLU relatif sepi. Evaluasi lokasi, cek teknis, atau strategi marketing. Jika tetap rendah, pertimbangkan relokasi."
-            }
-
-            df_tinggi = df_encoded.query("Level == 'Tinggi'").sort_values("Total Pendapatan", ascending=False)
-            df_sedang = df_encoded.query("Level == 'Sedang'").sort_values("Total Pendapatan", ascending=False)
-            df_rendah = df_encoded.query("Level == 'Rendah'").sort_values("Total Pendapatan", ascending=False)
-
-            tinggi = df_tinggi["Nama SPKLU"].tolist()
-            sedang = df_sedang["Nama SPKLU"].tolist()
-            rendah = df_rendah["Nama SPKLU"].tolist()
-
-            col1, col2, col3 = st.columns(3)
-
-            def buat_kotak(judul, data):
-                with st.container():
-                    st.markdown(f"### {judul}")
-                    st.markdown(
-                        f"""
-                        <div style="border:1px solid #ddd; border-radius:10px; padding:10px;
-                                    max-height:200px; overflow-y:auto; background-color:#f5f5f5; margin-bottom:15px;">
-                            {"".join([f"<p style='margin:5px 0;'>{item}</p>" for item in data])}
-                        </div>
-                        <p style='font-weight:bold; margin-top:5px;'>
-                            Jumlah Unit: {len(data)}
-                        </p>
-                        """,
-                        unsafe_allow_html=True
-                    )
-
-            with col1:
-                buat_kotak("Tinggi", tinggi)
-
-            with col2:
-                buat_kotak("Sedang", sedang)
-
-            with col3:
-                buat_kotak("Rendah", rendah)
-
-            st.markdown("---")
-
-            # === Layout Bawah: PCA (kiri) & Donut (kanan) ===
-            col_left, col_right = st.columns([2, 1])
-
-            with col_left:
-                from sklearn.decomposition import PCA
-                import plotly.express as px
-
-                # --- PCA ---
-                pca = PCA(n_components=2)
-                X_pca = pca.fit_transform(X_scaled)
-
-                df_encoded["PC1"] = X_pca[:, 0]
-                df_encoded["PC2"] = X_pca[:, 1]
-
-                fig_pca = px.scatter(
-                    df_encoded,
-                    x="PC1", y="PC2",
-                    color="Level",
-                    hover_data=["Nama SPKLU", "Total Pendapatan", "Jumlah KWH"],
-                    title="Visualisasi Clustering SPKLU dengan PCA (2D Projection)"
-                )
-                st.plotly_chart(fig_pca, use_container_width=True, key="scatter_pca")
-
-            with col_right:
-                import matplotlib.pyplot as plt
-                fig2, ax2 = plt.subplots()
-                level_count = df_encoded["Level"].value_counts()
-
-                wedges, texts, autotexts = ax2.pie(
-                    level_count,
-                    labels=level_count.index,
-                    autopct='%1.1f%%',
-                    colors=["lightcoral", "gold", "seagreen"],
-                    startangle=90,
-                    wedgeprops=dict(width=0.4)
-                )
-
-                ax2.text(0, 0, "Total\\n" + str(level_count.sum()), ha='center', va='center', fontsize=12, fontweight='bold')
-                ax2.set_title("Proporsi SPKLU per Level")
-                st.pyplot(fig2)
-
+        with col_left:
             import plotly.express as px
+            label_map = {
+                "Tinggi": "Intensitas Tinggi",
+                "Sedang": "Intensitas Sedang",
+                "Rendah": "Intensitas Rendah"
+            }
+            fitur_group["Level Deskriptif"] = fitur_group["Level"].map(label_map)
 
+            fig1 = px.scatter(
+                fitur_group,
+                x="Jumlah Transaksi",
+                y="Jumlah KWH",
+                size="Total Pendapatan",
+                color="Level Deskriptif",
+                hover_data=["Nama SPKLU"],
+                color_discrete_map={
+                    "Intensitas Rendah (sepi penggunaan)": "lightcoral",
+                    "Intensitas Sedang (potensial berkembang)": "gold",
+                    "Intensitas Tinggi (ramai digunakan)": "seagreen"
+                },
+                category_orders={"Level Deskriptif": [
+                    "Intensitas Tinggi (ramai digunakan)",
+                    "Intensitas Sedang (potensial berkembang)",
+                    "Intensitas Rendah (sepi penggunaan)"]
+                }
+            )
+            st.plotly_chart(fig1, use_container_width=True, key="scatter_plot")
 
-            # --- Pilih SPKLU ---
-            spklu_list = df4["Nama SPKLU"].unique()
-            selected_spklu = st.selectbox("Pilih SPKLU", spklu_list)
+        with col_right:
+            import plotly.graph_objects as go
 
-            # --- Filter data sesuai pilihan ---
-            df_selected = df4[df4["Nama SPKLU"] == selected_spklu]
+            # Hitung value counts
+            level_count = fitur_group["Level"].value_counts()
 
-            col1, col2 = st.columns(2)
+            # Buat pie chart dengan donut style
+            fig2 = go.Figure(data=[go.Pie(
+                labels=level_count.index,
+                values=level_count.values,
+                hole=0.4,  # bikin jadi donut
+                marker=dict(colors=["lightcoral", "gold", "seagreen"]),
+                textinfo='percent'  # tampilkan label + persentase
+            )])
 
-            with col1:
-                import plotly.express as px
+            # Tambahkan total di tengah
+            fig2.add_annotation(
+                text=f"<b>Total<br>{level_count.sum()}</b>",
+                x=0.5, y=0.5,
+                font=dict(size=14, color="black"),
+                showarrow=False
+            )
 
-                # Bar Chart Kapasitas per Kategori
-                fig_bar = px.bar(
-                    df_selected,
-                    x="Kategori",
-                    y="Kapasitas",
-                    color="Kategori",
-                    text="Kapasitas",
-                    title=f"Kapasitas per Kategori - {selected_spklu}",
-                    color_discrete_sequence=px.colors.qualitative.Set2
-                )
-                fig_bar.update_traces(textposition="outside")
-                st.plotly_chart(fig_bar, use_container_width=True)
+            # Atur judul
+            fig2.update_layout(
+                title_text="Proporsi SPKLU per Level",
+                title_x=0.5
+            )
 
-            with col2:
-                import matplotlib.pyplot as plt
+            st.plotly_chart(fig2, use_container_width=True)
 
-                # Donut Chart Kapasitas per Kategori
-                fig, ax = plt.subplots()
-                kapasitas_per_kategori = df_selected.groupby("Kategori")["Kapasitas"].sum()
-                wedges, texts, autotexts = ax.pie(
-                    kapasitas_per_kategori,
-                    labels=kapasitas_per_kategori.index,
-                    autopct='%1.1f%%',
-                    startangle=90,
-                    wedgeprops=dict(width=0.4)
-                )
-                ax.text(0, 0, f"Total\\n{kapasitas_per_kategori.sum()} kW",
-                        ha='center', va='center', fontsize=12, fontweight='bold')
-                ax.set_title(f"Proporsi Kapasitas - {selected_spklu}")
-                st.pyplot(fig)
-
+        # Fitur 1: Informasi Lebih Lanjut
+        with st.expander("Data Awal"):
+            st.write("Menampilkan cuplikan awal data transaksi SPKLU yang digunakan dalam analisis.")
 
 
 
