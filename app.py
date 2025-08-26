@@ -1,82 +1,42 @@
-import streamlit as st
 import pandas as pd
+import streamlit as st
 import matplotlib.pyplot as plt
-import seaborn as sns
 import warnings
 import base64
-import plotly.graph_objects as go
 import folium
-import json
+import altair as alt
+import seaborn as sns
 import plotly.express as px
-from streamlit_folium import folium_static
-from streamlit_folium import st_folium
+import plotly.graph_objects as go
+from plotly.subplots import make_subplots
 from folium.plugins import MarkerCluster
-from statsmodels.tsa.arima.model import ARIMA
+from streamlit_folium import folium_static
 from streamlit_option_menu import option_menu
-from sklearn.preprocessing import MinMaxScaler
+from statsmodels.tsa.arima.model import ARIMA
+
+
 
 
 # Optional: use wide layout
 st.set_page_config(layout="wide")
 warnings.filterwarnings("ignore")
 
-# Sidebar navigation
-from streamlit_option_menu import option_menu
-import base64
-
-# Fungsi konversi gambar ke base64
+# ==== Fungsi Konversi Gambar ke Base64 ====
 def get_base64_image(image_path):
     with open(image_path, "rb") as image_file:
         encoded = base64.b64encode(image_file.read()).decode()
     return encoded
 
-# Ambil gambar logo dan ubah ke base64
+# Logo
 logo_base64 = get_base64_image("logo spklu.png")
 
-
-# Koordinat bounding box tiap UNITUP (lat_min, lon_min, lat_max, lon_max)
-unitup_bounds = {
-    "5351": {
-        "nama": "Bandung Barat",
-        "bounds": [[-6.95, 107.55], [-6.90, 107.60]]
-    },
-    "53567": {
-        "nama": "Bandung Selatan",
-        "bounds": [[-7.00, 107.60], [-6.95, 107.65]]
-    },
-    "53563": {
-        "nama": "Bandung Timur",
-        "bounds": [[-6.95, 107.70], [-6.90, 107.75]]
-    },
-    "53575": {
-        "nama": "Bandung Utara",
-        "bounds": [[-6.88, 107.60], [-6.83, 107.65]]
-    },
-    "53559": {
-        "nama": "Kopo",
-        "bounds": [[-6.94, 107.58], [-6.89, 107.63]]
-    },
-    "53751": {
-        "nama": "Cijaura",
-        "bounds": [[-6.92, 107.65], [-6.87, 107.70]]
-    },
-    "53555": {
-        "nama": "Ujungberung",
-        "bounds": [[-6.91, 107.73], [-6.86, 107.78]]
-    }
-}
-
-
-
-
-# Sidebar
+# ==== Sidebar ====
 with st.sidebar:
-    # Tampilkan logo dan teks berdampingan
+    # Logo + judul
     st.markdown(
         f"""
         <div style="display: flex; align-items: center; margin-bottom: 20px;">
-            <img src="data:image/png;base64,{logo_base64}" width="500" style="margin-right:20px;" />
-            <h4 style="margin: 0;">SPKLU Dashboard</h4>
+            <img src="data:image/png;base64,{logo_base64}" width="220" style="margin-right:20px;" />
         </div>
         """,
         unsafe_allow_html=True
@@ -89,332 +49,225 @@ with st.sidebar:
         icons=["bar-chart", "activity", "graph-up", "info-circle"],
         menu_icon="cast",
         default_index=0,
-        styles = {
-    "container": {
-        "padding": "5!important",
-        "background-color": "#D6EBFF",  # Soft blue sidebar background
-    },
-    "icon": {
-        "color": "#007ACC",  # PLN blue for icons
-        "font-size": "18px"
-    },
-    "nav-link": {
-        "font-size": "16px",
-        "text-align": "left",
-        "color": "#444444",  # Neutral gray text
-        "margin": "4px",
-        "border-radius": "8px"
-    },
-    "nav-link-selected": {
-        "background-color": "#B3D9FF",  # Lighter blue for selected
-        "color": "#003366",  # Darker navy text
-        "font-weight": "bold"
-    }
-}
-
+        styles={
+            "container": {
+                "padding": "5!important",
+                "background-color": "#D6EBFF",
+            },
+            "icon": {
+                "color": "#007ACC",
+                "font-size": "18px"
+            },
+            "nav-link": {
+                "font-size": "16px",
+                "text-align": "left",
+                "color": "#444444",
+                "margin": "4px",
+                "border-radius": "8px"
+            },
+            "nav-link-selected": {
+                "background-color": "#B3D9FF",
+                "color": "#003366",
+                "font-weight": "bold"
+            }
+        }
     )
 
+# ==== Load Dataset ====
+url_data2 = "https://docs.google.com/spreadsheets/d/16cyvXwvucVb7EM1qiikZpbK8J8isbktuiw-MR1EJDEY/export?format=csv&gid=829004516"
+df2 = pd.read_csv(url_data2)
+df2.columns = df2.columns.str.strip()
 
-# Load file
-try:
-    df = pd.read_excel('Coba kp.xlsx')
-    #url_data3 = "https://docs.google.com/spreadsheets/d/16cyvXwvucVb7EM1qiikZpbK8J8isbktuiw-MR1EJDEY/export?format=csv&gid=1874488223"
-    #df = pd.read_csv(url_data3)
-    df['TGL BAYAR'] = pd.to_datetime(df['TGL BAYAR'], format='%d/%m/%Y', errors='coerce')
-    df['Efisiensi'] = df['RPKWH'] / df['PEMKWH']
-except Exception as e:
-    st.error(f"Gagal memuat file: {e}")
-    st.stop()
-
+# ==== Halaman Berdasarkan Menu ====
 if selected == "Menu Utama":
-    st.title('Dashboard Ringkasan SPKLU')
-    st.write("Ringkasan data transaksi SPKLU di Kota Bandung Raya")
+    st.title("Dashboard Ringkasan SPKLU")
+    st.write("Ringkasan Data Penjualan SPKLU se-Kota Bandung Raya")
 
-    # 1. Format kolom tanggal dan buat kolom bulan
-    df['TANGGAL'] = pd.to_datetime(df['TGL BAYAR'])
-    df['BULAN'] = df['TANGGAL'].dt.to_period('M').dt.to_timestamp()
+    # ==== Filter Bulan & Tahun ====
+    if 'Bulan & Tahun' in df2.columns:
+        # Mapping nama bulan Indonesia ke angka
+        bulan_map = {
+            "Januari": 1, "Februari": 2, "Maret": 3, "April": 4,
+            "Mei": 5, "Juni": 6, "Juli": 7, "Agustus": 8,
+            "September": 9, "Oktober": 10, "November": 11, "Desember": 12
+        }
 
-    # 2. Ambil daftar bulan unik & urutkan dari terbaru ke terlama
-    daftar_bulan = df[['BULAN']].drop_duplicates().sort_values(by='BULAN', ascending=False)
-    daftar_bulan_display = daftar_bulan['BULAN'].dt.strftime('%B %Y').tolist()
-    pilihan_display = ["Semua Bulan"] + daftar_bulan_display
+        # Pisahkan kolom Bulan & Tahun
+        df2[['Bulan', 'Tahun']] = df2['Bulan & Tahun'].str.split(" ", expand=True)
+        df2['Tahun'] = df2['Tahun'].astype(int)
+        df2['BulanNum'] = df2['Bulan'].map(bulan_map)
 
-    # 3. Dropdown filter bulan
-    pilihan_bulan_display = st.selectbox("Pilih Bulan", pilihan_display)
+        # Urutkan berdasarkan Tahun dan Bulan
+        df2 = df2.sort_values(by=['Tahun', 'BulanNum'])
 
-    if pilihan_bulan_display != "Semua Bulan":
-        bulan_terpilih = pd.to_datetime(pilihan_bulan_display)
-        df_filter = df[df['BULAN'] == bulan_terpilih]
-    else:
-        df_filter = df.copy()
+        # Buat list opsi (urut sesuai waktu)
+        bulan_tahun_list = df2['Bulan & Tahun'].unique().tolist()
+        bulan_tahun_list.insert(0, "Semua")  # tambahkan opsi "Semua" di paling depan
 
-    # -------------------------
-    # 4. Pratinjau Data
-    st.subheader("Pratinjau Data")
+        # Selectbox dengan default "Semua"
+        selected_bulan_tahun = st.selectbox("Pilih Periode", bulan_tahun_list, index=0)
 
-    # Pilih dan ubah nama kolom
-    selected_columns = ['UNITUP', 'NAMA_SPKLU', 'PEMKWH', 'RP PERKWH', 'RPKWH', 'RPTOTAL']
+        # Filter DataFrame sesuai pilihan
+        filtered_df = df2 if selected_bulan_tahun == "Semua" else df2[df2['Bulan & Tahun'] == selected_bulan_tahun]
 
-    # Alias kolom
-    column_alias = {
-        'UNITUP': 'Unit',
-        'NAMA_SPKLU': 'Nama SPKLU',
-        'PEMKWH': 'Jumlah kWh',
-        'RP PERKWH': 'Harga per kWh',
-        'RPKWH': 'Total Biaya',
-        'RPTOTAL': 'Total Biaya + PPN'
-    }
+        # ==== Ringkasan Statistik ====
+        total_pendapatan = filtered_df['Total Pendapatan'].sum()
+        total_kwh = filtered_df['Jumlah KWH'].sum()
+        total_transaksi = filtered_df['Jumlah Transaksi'].sum()
 
-    # Terapkan alias dan tampilkan tanpa index
-    df_display = df_filter[selected_columns].rename(columns=column_alias)
-    st.dataframe(df_display.reset_index(drop=True), height=200, hide_index=True)
+        # KPI Box
+        st.markdown("""
+            <style>
+            .metric-container {display: flex; justify-content: space-between; gap: 10px;}
+            .metric-box {flex: 1; border: 2px solid #e6e6e6; border-radius: 10px;
+                         padding: 20px; text-align: center; background-color: #f9f9f9;
+                         box-shadow: 2px 2px 8px rgba(0,0,0,0.05);}
+            .metric-box.wide {flex: 1.5;}
+            .metric-label {font-weight: bold; font-size: 18px; margin-bottom: 8px;}
+            .metric-value {font-size: 22px; color: #333;}
+            </style>
+        """, unsafe_allow_html=True)
 
-    
-    
-    # -------------------------
-    # 5. Ringkasan Statistik       
-    total_kwh = df_filter['PEMKWH'].sum()
-    total_income = df_filter['RPKWH'].sum()
-    total_transaksi = df_filter['No'].nunique()
-    
-    # Spasi atas
+        st.markdown(f"""
+            <div class="metric-container">
+                <div class="metric-box">
+                    <div class="metric-label">Total KWH Terjual</div>
+                    <div class="metric-value">{total_kwh:,.0f}</div>
+                </div>
+                <div class="metric-box wide">
+                    <div class="metric-label">Total Pendapatan</div>
+                    <div class="metric-value">Rp{total_pendapatan:,.0f}</div>
+                </div>
+                <div class="metric-box">
+                    <div class="metric-label">Jumlah Transaksi</div>
+                    <div class="metric-value">{total_transaksi:,.0f}</div>
+                </div>
+            </div>
+        """, unsafe_allow_html=True)
+
+    # ==== Ranking SPKLU ====
+    st.subheader("Ranking SPKLU")
+
+    def plot_top5(df, kolom, judul, warna):
+        top5 = df.groupby("Nama SPKLU")[kolom].sum().nlargest(5).sort_values()
+        fig, ax = plt.subplots(figsize=(8, 5))
+        bars = ax.barh(top5.index, top5.values, color=warna)
+        ax.set_title(judul, fontsize=14, weight="bold")
+        ax.set_xlabel(kolom, fontsize=12)
+        ax.set_ylabel("SPKLU", fontsize=12)
+
+        # Tambahkan label nilai di ujung bar
+        for bar in bars:
+            ax.text(bar.get_width() + (0.01 * max(top5.values)),
+                    bar.get_y() + bar.get_height()/2,
+                    f"{int(bar.get_width()):,}",
+                    va="center", fontsize=10)
+
+        st.pyplot(fig)
+
+    tab1, tab2, tab3 = st.tabs(["Total KWH Terjual", "Total Pendapatan", "Jumlah Transaksi"])
+    with tab2:
+        plot_top5(filtered_df, "Total Pendapatan", "5 SPKLU dengan Pendapatan Tertinggi", "skyblue")
+    with tab1:
+        plot_top5(filtered_df, "Jumlah KWH", "5 SPKLU dengan KWH Terjual Terbanyak", "lightgreen")
+    with tab3:
+        plot_top5(filtered_df, "Jumlah Transaksi", "5 SPKLU dengan Transaksi Terbanyak", "orange")
+
+
+
+
+
+
+    # ==== Dropdown Pilihan SPKLU ====
     st.markdown("<br>", unsafe_allow_html=True)
-    
-    st.subheader("Ringkasan Statistik")
-    
-    # CSS Responsive
-    st.markdown("""
-        <style>
-        .metric-container {
-            display: flex;
-            justify-content: space-between;
-            gap: 10px;
-            flex-wrap: wrap; /* supaya bisa turun kalau layar kecil */
-        }
-        .metric-box {
-            flex: 1;
-            min-width: 200px; /* batas minimum ukuran kotak */
-            border: 2px solid #e6e6e6;
-            border-radius: 10px;
-            padding: 20px;
-            text-align: center;
-            background-color: #f9f9f9;
-            box-sizing: border-box;
-        }
-        .metric-box.wide {
-            flex: 1.5;
-        }
-        .metric-label {
-            font-weight: bold;
-            font-size: 22px;
-            margin-bottom: -5px;
-            word-wrap: break-word;
-        }
-        .metric-value {
-            font-size: 22px;
-            color: #333;
-        }
-    
-        /* Responsif untuk layar kecil */
-        @media (max-width: 768px) {
-            .metric-container {
-                flex-direction: column;
-                align-items: stretch;
-            }
-            .metric-box {
-                width: 100%;
-            }
-        }
-        </style>
-    """, unsafe_allow_html=True)
-    
-    # Display metrics
-    st.markdown(f"""
-        <div class="metric-container">
-            <div class="metric-box">
-                <div class="metric-label">Total KWH Terjual</div>
-                <div class="metric-value">{total_kwh:,.0f}</div>
-            </div>
-            <div class="metric-box wide">
-                <div class="metric-label">Total Pendapatan</div>
-                <div class="metric-value">Rp{total_income:,.0f}</div>
-            </div>
-            <div class="metric-box">
-                <div class="metric-label">Jumlah Transaksi</div>
-                <div class="metric-value">{total_transaksi}</div>
-            </div>
-        </div>
-    """, unsafe_allow_html=True)
+    spklu_list = ["Silahkan pilih SPKLU"] + sorted(df2['Nama SPKLU'].unique().tolist())
+    pilihan_spklu = st.selectbox("Pilih SPKLU yang ingin ditampilkan", spklu_list)
+
+    # ==== Summary semua SPKLU untuk map ====
+    summary_all = filtered_df.groupby('Nama SPKLU', as_index=False).agg({
+        'Jumlah Transaksi': 'sum',
+        'Jumlah KWH': 'sum',
+        'Total Pendapatan': 'sum'
+    }).rename(columns={'Jumlah KWH': 'Total kWh'})
+
+    # ==== Jika pilih salah satu SPKLU -> tampilkan ringkasannya ====
+    if pilihan_spklu != "Silahkan pilih SPKLU":
+        df_filter_spklu = summary_all[summary_all['Nama SPKLU'] == pilihan_spklu]
+        if not df_filter_spklu.empty:
+            row = df_filter_spklu.iloc[0]
 
 
 
 
-    # -------------------------
-    
-    
-    # Tambahkan <br> sebagai spasi atas
-    st.markdown("<br>", unsafe_allow_html=True)
-    st.subheader("Ranking SPKLU Berdasarkan KWH Terjual")
+            st.markdown(f"""
+                <div style="font-size:24px; font-weight:bold; text-align:center; margin-top:10px;">
+                    {row['Nama SPKLU']}<br>Bulan : {selected_bulan_tahun}
+                </div>
+                <div class="metric-container">
+                    <div class="metric-box">
+                        <div class="metric-label">Total KWH Terjual</div>
+                        <div class="metric-value">{row['Total kWh']:,.0f}</div>
+                    </div>
+                    <div class="metric-box wide">
+                        <div class="metric-label">Total Pendapatan</div>
+                        <div class="metric-value">Rp{row['Total Pendapatan']:,.0f}</div>
+                    </div>
+                    <div class="metric-box">
+                        <div class="metric-label">Jumlah Transaksi</div>
+                        <div class="metric-value">{int(row['Jumlah Transaksi']):,}</div>
+                    </div>
+                </div>
+            """, unsafe_allow_html=True)
 
-    # Ambil data SPKLU dengan total KWH berdasarkan bulan yang dipilih (df_filter)
-    spklu_ranking_kwh = df_filter.groupby('NAMA_SPKLU')['PEMKWH'].sum().reset_index()
-    spklu_ranking_kwh = spklu_ranking_kwh.sort_values(by='PEMKWH', ascending=False)
-
-    top_n = 10
-    top_spklu = spklu_ranking_kwh.head(top_n)
-
-    fig = go.Figure(go.Bar(
-        x=top_spklu['PEMKWH'],
-        y=top_spklu['NAMA_SPKLU'],
-        orientation='h',
-        marker=dict(color='#007ACC'),
-        text=top_spklu['PEMKWH'].round(0),
-        textposition='outside',
-        insidetextanchor='start'
-    ))
-
-    fig.update_layout(
-        title=f'Urutan SPKLU berdasarkan Total KWH Terjual',
-        xaxis_title='Total KWH',
-        yaxis=dict(autorange="reversed"),
-        height=500,
-        plot_bgcolor='#ffffff',
-        paper_bgcolor='#ffffff'
-    )
-
-    st.plotly_chart(fig, use_container_width=True)
-
- # -------------------------
-    st.subheader("Ranking SPKLU Berdasarkan Pendapatan Terjual")
-
-    # Ambil data SPKLU dengan total KWH berdasarkan bulan yang dipilih (df_filter)
-    spklu_ranking_kwh = df_filter.groupby('NAMA_SPKLU')['RPKWH'].sum().reset_index()
-    spklu_ranking_kwh = spklu_ranking_kwh.sort_values(by='RPKWH', ascending=False)
-
-    top_n = 10
-    top_spklu = spklu_ranking_kwh.head(top_n)
-
-    fig = go.Figure(go.Bar(
-        x=top_spklu['RPKWH'],
-        y=top_spklu['NAMA_SPKLU'],
-        orientation='h',
-        marker=dict(color='#007ACC'),
-        text=top_spklu['RPKWH'].round(0),
-        textposition='outside',
-        insidetextanchor='start'
-    ))
-
-    fig.update_layout(
-        title=f'Urutan SPKLU berdasarkan Total Pendapatan',
-        xaxis_title='Total Pendapatan',
-        yaxis=dict(autorange="reversed"),
-        height=500,
-        plot_bgcolor='#ffffff',
-        paper_bgcolor='#ffffff'
-    )
-
-    st.plotly_chart(fig, use_container_width=True)
-
-#-----------------------------------
-
-     # -------------------------
-    st.subheader("Ranking SPKLU Berdasarkan Jumlah Transaksi")
-
-    # Hitung jumlah transaksi untuk setiap SPKLU
-    spklurank_transaksi = df_filter.groupby('NAMA_SPKLU').size().reset_index(name='JUMLAH_TRANSAKSI')
-
-    # Urutkan dari yang terbesar
-    spklurank_transaksi = spklurank_transaksi.sort_values(by='JUMLAH_TRANSAKSI', ascending=False)
-
-    # Ambil 10 SPKLU teratas
-    top_n = 10
-    top_spklu = spklurank_transaksi.head(top_n)
-
-    # Plot horizontal bar chart
-    fig = go.Figure(go.Bar(
-        x=top_spklu['JUMLAH_TRANSAKSI'],
-        y=top_spklu['NAMA_SPKLU'],
-        orientation='h',
-        marker=dict(color='#007ACC'),
-        text=top_spklu['JUMLAH_TRANSAKSI'],
-        textposition='outside',
-        insidetextanchor='start'
-    ))
-
-    fig.update_layout(
-        title='Urutan SPKLU berdasarkan Jumlah Transaksi',
-        xaxis_title='Jumlah Transaksi',
-        yaxis=dict(autorange="reversed"),
-        height=500,
-        plot_bgcolor='#ffffff',
-        paper_bgcolor='#ffffff'
-    )
-
-    st.plotly_chart(fig, use_container_width=True)
-
-#--------------------------
-
-    # Judul
+    # ==== Peta Lokasi ====
     st.title("Peta Lokasi SPKLU di Bandung")
 
-    # Data lokasi SPKLU
     spklu_locations = [
-        ["SPKLU PLN UP3 BANDUNG", -6.948691482456584, 107.61219619688617],
+        ["SPKLU PLN UP3 BANDUNG", -6.948691, 107.612196],
         ["SPKLU PLN ULP BANDUNG UTARA", -6.920962, 107.608129],
         ["SPKLU PLN ULP BANDUNG BARAT", -6.933869, 107.57143],
         ["SPKLU PLN ULP BANDUNG TIMUR", -6.899030, 107.641179],
         ["SPKLU PLN ULP CIJAWURA", -6.898929, 107.641115],
-        ["SPKLU PLN ULP UJUNGBERUNG", -6.2528476, 107.0104015],
+        ["SPKLU PLN ULP UJUNGBERUNG", -6.9038, 107.6657],
         ["SPKLU PLN ULP KOPO", -6.954014, 107.640576],
         ["SPKLU PLN TRANS STUDIO MALL BANDUNG", -6.9254, 107.6365],
         ["SPKLU PLN UID JAWA BARAT", -6.919962, 107.60901],
         ["SPKLU POLDA JABAR", -6.936625, 107.7033697],
-        ["SPKLU PLN ICON HUB (BRAGA HERITAGE)", -6.9199358706829255, 107.6098682273523],
+        ["SPKLU PLN ICON HUB (BRAGA HERITAGE)", -6.919935, 107.609868],
         ["SPKLU PLN UIP JBT", -6.938285, 107.627942],
         ["SPKLU (ARISTA POWER) BYD BANDUNG", -6.93866, 107.6759],
         ["SPKLU PLN GEOWISATA INN", -6.91758, 107.57838],
+        ["SPKLU ONE STOP CHARGING STATION SURAPATI", -6.898765, 107.62127],
+        ["SPKLU REST AREA KM 147 A RUAS PADALARANG - CILEUNYI",-6.967293, 107.681425],
+        ["SPKLU PLN MALAGA RESTO",-6.88534, 107.61274],
+        ["SPKLU PLN ICON PLUS BANDUNG", -6.908399, 107.631291],
+        ["SPKLU PLN TENTH AVENUE BANDUNG", -6.946393, 107.640999],
+        ["SPKLU PLN HOTEL NEWTON",-6.914804, 107.629904],
+        ["SPKLU PLN RS ADVENT BANDUNG", -6.89213, 107.603044],
+        ["SPKLU PLN TRANSMART CIPADUNG", -6.92571, 107.711582],
+        ["SPKLU PLN HOTEL CEMERLANG", -6.912288, 107.597528],
+        ["SPKLU PLN Best Western Hotel Setiabudhi Bandung", -6.861139, 107.595205]
     ]
 
-    # Buat DataFrame dari lokasi SPKLU
     df_lokasi = pd.DataFrame(spklu_locations, columns=["NAMA_SPKLU", "LAT", "LON"])
+    df_map = pd.merge(df_lokasi, summary_all, left_on="NAMA_SPKLU", right_on="Nama SPKLU", how="left")
+    df_map[['Jumlah Transaksi','Total kWh','Total Pendapatan']] = df_map[['Jumlah Transaksi','Total kWh','Total Pendapatan']].fillna(0)
 
-    # Buat ringkasan data per SPKLU
-    summary = df_filter.groupby('NAMA_SPKLU').agg({
-        'No': 'count',
-        'PEMKWH': 'sum',
-        'RPKWH': 'sum'
-    }).reset_index().rename(columns={
-        'No': 'Jumlah Transaksi',
-        'PEMKWH': 'Total kWh',
-        'RPKWH': 'Total Pendapatan'
-    })
-
-    # Gabungkan lokasi dan data summary
-    df_map = pd.merge(df_lokasi, summary, on="NAMA_SPKLU", how="left")
-
-    # Isi NaN dengan 0 agar tetap ditampilkan
-    df_map[['Jumlah Transaksi', 'Total kWh', 'Total Pendapatan']] = df_map[[
-        'Jumlah Transaksi', 'Total kWh', 'Total Pendapatan'
-    ]].fillna(0)
-
-    # Inisialisasi peta
     m = folium.Map(location=[-6.92, 107.62], zoom_start=12)
     marker_cluster = MarkerCluster().add_to(m)
 
-    # Tambahkan marker
     for _, row in df_map.iterrows():
         popup_html = f"""
         <div style="font-family: Arial; font-size: 13px; line-height: 1.5">
             <strong>{row['NAMA_SPKLU']}</strong><br>
-            Bulan : {pilihan_bulan_display}<br><br>
+            <em>Periode : {selected_bulan_tahun}</em><br><br>
             <table style="width: 250px">
                 <tr><td>🔁 Jumlah Transaksi:</td><td><strong>{int(row['Jumlah Transaksi']):,}</strong></td></tr>
-                <tr><td>⚡ Total kWh:</td><td><strong>{row['Total kWh']:.0f}</strong></td></tr>
+                <tr><td>⚡ Total kWh:</td><td><strong>{row['Total kWh']:,.0f}</strong></td></tr>
                 <tr><td>💰 Total Pendapatan:</td><td><strong>Rp {row['Total Pendapatan']:,.0f}</strong></td></tr>
             </table>
         </div>
         """
-
         folium.Marker(
             location=[row['LAT'], row['LON']],
             popup=folium.Popup(popup_html, max_width=300),
@@ -422,7 +275,6 @@ if selected == "Menu Utama":
             icon=folium.Icon(color="green", icon="bolt", prefix="fa")
         ).add_to(marker_cluster)
 
-    # Tampilkan peta di Streamlit
     folium_static(m, width=1100, height=700)
 
 
@@ -430,87 +282,706 @@ if selected == "Menu Utama":
 
 
 
-elif selected == "Analisis":
-    st.title('Analisis Detail Data SPKLU')
-    st.write("Analisis mendalam SPKLU")
+elif selected == "Analisis":   
+    st.title("Analisis Data SPKLU")
 
-    # Analisis per UNITUP yang spesifik
-    st.subheader('Analisis Transaksi per SPKLU dalam Unit Tertentu')
-    selected_unit_analysis = st.selectbox('Pilih UNIT', df['UNITUP'].unique())
+    # Load Data4 (kapasitas & kategori)
+    url_data4 = "https://docs.google.com/spreadsheets/d/16cyvXwvucVb7EM1qiikZpbK8J8isbktuiw-MR1EJDEY/export?format=csv&gid=1731077450"    
+    df4 = pd.read_csv(url_data4)
+    df4.columns = df4.columns.str.strip()
 
-    if selected_unit_analysis:
-        df_unit_analysis = df[df['UNITUP'] == selected_unit_analysis]
-        spklu_unit_analysis = df_unit_analysis.groupby('NAMA_SPKLU')['No'].nunique().reset_index()
-        spklu_unit_analysis = spklu_unit_analysis.sort_values(by='No', ascending=False).rename(columns={'No': 'Jumlah Transaksi', 'NAMA_SPKLU': 'SPKLU'})
-        st.write(f'Jumlah Transaksi SPKLU di UNIT {selected_unit_analysis}:')
-        st.dataframe(spklu_unit_analysis, use_container_width=True, hide_index=True)
+    tab1, tab2, tab3, tab4, tab5, tab6, tab7, tab8 = st.tabs([
+        "Ranking SPKLU", 
+        "Compare SPKLU", 
+        "Compare ULP", 
+        "Kapasitas & Kategori",
+        "Level Spklu",
+        "Tren",
+        "Test3",
+        "Test4"
+    ])
 
-        # Donut Chart
-    fig = go.Figure(data=[go.Pie(
-        labels=spklu_unit_analysis['SPKLU'],
-        values=spklu_unit_analysis['Jumlah Transaksi'],
-        hole=0.4,  # Donut style
-        marker=dict(colors=px.colors.qualitative.Vivid),
-        textinfo='percent',
-        hoverinfo='label+value'
-    )])
+    # ============================
+    # Tab 1 - Ranking
+    # ============================
+    with tab1:
+        st.subheader("Ranking SPKLU")
 
-    st.plotly_chart(fig, use_container_width=True)
+        # Pilihan ranking: 5 teratas / 5 terbawah
+        pilihan_ranking = st.radio("Pilih Ranking", ["5 Teratas", "5 Terbawah"], horizontal=True)
+
+        def plot_ranking(df, kolom, judul, warna, ranking):
+            grouped = df.groupby("Nama SPKLU")[kolom].sum()
+            if ranking == "5 Teratas":
+                data = grouped.nlargest(5).sort_values(ascending=True)  # biar kecil di bawah, besar di atas
+            else:
+                data = grouped.nsmallest(5).sort_values(ascending=False)  # biar kecil di atas, besar di bawah
+
+            fig, ax = plt.subplots(figsize=(8, 5))
+            data.plot(kind="barh", color=warna, ax=ax)
+            ax.set_xlabel(kolom)
+            ax.set_ylabel("")
+            st.pyplot(fig)
+
+
+        # Tampilkan grafik berdasarkan pilihan
+        plot_ranking(df2, "Jumlah Transaksi", "SPKLU", "orange", pilihan_ranking)        
+        plot_ranking(df2, "Jumlah KWH", "SPKLU", "lightgreen", pilihan_ranking)
+        plot_ranking(df2, "Total Pendapatan", "SPKLU", "skyblue", pilihan_ranking)
+        
 
 
 
-    st.subheader('Ranking SPKLU Berdasarkan Total KWH dan Pendapatan')
-    spklu_summary = df.groupby('NAMA_SPKLU').agg({
-        'PEMKWH': 'sum',
-        'RPKWH': 'sum'
-    }).reset_index()
+    # ============================
+    # Tab 2 - Membandingkan SPKLU
+    # ============================
+    with tab2:
+      st.subheader("Perbandingan Antar SPKLU")
 
-    ranking_spklu_kwh = spklu_summary.sort_values(by='PEMKWH', ascending=False).rename(columns={'PEMKWH': 'total_kwh'})
-    ranking_spklu_pendapatan = spklu_summary.sort_values(by='RPKWH', ascending=False).rename(columns={'RPKWH': 'total_pendapatan'})
+      # Urutan bulan
+      bulan_urut = {
+          "Januari": 1, "Februari": 2, "Maret": 3, "April": 4,
+          "Mei": 5, "Juni": 6, "Juli": 7, "Agustus": 8,
+          "September": 9, "Oktober": 10, "November": 11, "Desember": 12
+      }
 
-    col1_rank, col2_rank = st.columns(2)
-    with col1_rank:
-        st.write("Ranking NAMA_SPKLU Berdasarkan Total KWH Terjual:")
-        st.dataframe(ranking_spklu_kwh)
-    with col2_rank:
-        st.write("Ranking NAMA_SPKLU Berdasarkan Total Pendapatan:")
-        st.dataframe(ranking_spklu_pendapatan)
+      # Pisahkan kolom "Bulan & Tahun"
+      df2["Bulan"] = df2["Bulan & Tahun"].str.split(" ").str[0]
+      df2["Tahun"] = df2["Bulan & Tahun"].str.split(" ").str[1].astype(int)
 
-    st.subheader('Visualisasi Total KWH dan Pendapatan per SPKLU')
-    ranking_unit = df.groupby('UNITUP').agg({'PEMKWH': 'sum', 'RPKWH': 'sum'}).reset_index()
-    fig, axes = plt.subplots(1, 2, figsize=(18, 6))
+      # Tambahkan kolom "key" untuk urutan (Tahun * 12 + Bulan)
+      df2["key"] = df2["Tahun"] * 12 + df2["Bulan"].map(bulan_urut)
 
-    sns.barplot(ax=axes[0], x='NAMA_SPKLU', y='total_kwh', data=ranking_spklu_kwh, palette='viridis')
-    axes[0].set_title('Total KWH Terjual per NAMA_SPKLU')
-    axes[0].set_xlabel('NAMA SPKLU')
-    axes[0].set_ylabel('Total KWH')
-    axes[0].tick_params(axis='x', rotation=90)
+      # Ambil daftar unik & urut
+      opsi_bulan_tahun = (
+          df2.sort_values("key")[["Bulan", "Tahun"]]
+          .drop_duplicates()
+          .assign(label=lambda x: x["Bulan"] + " " + x["Tahun"].astype(str))
+          ["label"].tolist()
+      )
 
-    sns.barplot(ax=axes[1], x='NAMA_SPKLU', y='total_pendapatan', data=ranking_spklu_pendapatan, palette='viridis')
-    axes[1].set_title('Total Pendapatan per NAMA_SPKLU')
-    axes[1].set_xlabel('NAMA SPKLU')
-    axes[1].set_ylabel('Total Pendapatan (IDR)')
-    axes[1].tick_params(axis='x', rotation=90)
+      # Dropdown dari - ke
+      col1, col2 = st.columns(2)
+      with col1:
+          start_option = st.selectbox("Dari Bulan", opsi_bulan_tahun, index=0)
+      with col2:
+          end_option = st.selectbox("Sampai Bulan", opsi_bulan_tahun, index=len(opsi_bulan_tahun)-1)
 
-    plt.tight_layout()
-    st.pyplot(fig)
-    plt.close(fig)
+      # Ambil key start & end
+      key_start = df2.loc[df2["Bulan & Tahun"] == start_option, "key"].iloc[0]
+      key_end = df2.loc[df2["Bulan & Tahun"] == end_option, "key"].iloc[0]
 
-    st.subheader('Proporsi KWH dan Pendapatan per Unit')
-    ranking_unit = df.groupby('UNITUP').agg({'PEMKWH': 'sum', 'RPKWH': 'sum'}).reset_index()
-    fig, axes = plt.subplots(1, 2, figsize=(16, 8))
+      # Filter rentang
+      if key_start <= key_end:
+          df_bulan = df2[(df2["key"] >= key_start) & (df2["key"] <= key_end)]
+      else:
+          st.warning("Bulan awal harus sebelum atau sama dengan bulan akhir!")
+          df_bulan = df2.copy()
 
-    axes[0].pie(ranking_unit['PEMKWH'], labels=ranking_unit['UNITUP'], autopct='%1.1f%%', startangle=90, colors=sns.color_palette('viridis', len(ranking_unit)))
-    axes[0].set_title('Proporsi Total KWH per Unit')
-    axes[0].axis('equal')
 
-    axes[1].pie(ranking_unit['RPKWH'], labels=ranking_unit['UNITUP'], autopct='%1.1f%%', startangle=90, colors=sns.color_palette('viridis', len(ranking_unit)))
-    axes[1].set_title('Proporsi Total Pendapatan per Unit')
-    axes[1].axis('equal')
+      # Pilih SPKLU untuk perbandingan (pakai data yang sudah difilter bulan)
+      spklu_list = df_bulan["Nama SPKLU"].dropna().unique()
+      col1, col2 = st.columns(2)
+      spklu_a = col1.selectbox("Pilih SPKLU A", spklu_list, index=0, key="spklu_a")
+      spklu_b = col2.selectbox(
+          "Pilih SPKLU B",
+          spklu_list,
+          index=min(1, len(spklu_list) - 1) if len(spklu_list) > 1 else 0,
+          key="spklu_b"
+      )
 
-    plt.tight_layout()
-    st.pyplot(fig)
-    plt.close(fig)
+      # Filter data per SPKLU (pakai data bulan)
+      data_a = df_bulan[df_bulan["Nama SPKLU"] == spklu_a]
+      data_b = df_bulan[df_bulan["Nama SPKLU"] == spklu_b]
+
+      # Ringkasan
+      summary_a = {
+          "Jumlah Transaksi": int(data_a["Jumlah Transaksi"].sum()),
+          "Total kWh": float(data_a["Jumlah KWH"].sum()),
+          "Pendapatan": float(data_a["Total Pendapatan"].sum())
+      }
+      summary_b = {
+          "Jumlah Transaksi": int(data_b["Jumlah Transaksi"].sum()),
+          "Total kWh": float(data_b["Jumlah KWH"].sum()),
+          "Pendapatan": float(data_b["Total Pendapatan"].sum())
+      }
+
+      # Tampilkan tabel ringkasan
+      st.subheader("Ringkasan Perbandingan")
+      st.dataframe(pd.DataFrame([summary_a, summary_b], index=[spklu_a, spklu_b]))
+
+      # Buat subplot 1 baris 3 kolom
+      fig = make_subplots(rows=1, cols=3, specs=[[{'type':'domain'}, {'type':'domain'}, {'type':'domain'}]])
+
+      # Donut Transaksi
+      fig.add_trace(go.Pie(
+          labels=[spklu_a, spklu_b],
+          values=[summary_a["Jumlah Transaksi"], summary_b["Jumlah Transaksi"]],
+          hole=0.6,
+          marker=dict(colors=px.colors.qualitative.Set2),
+          textinfo='percent',
+          showlegend=True  # legend hanya muncul sekali
+      ), 1, 1)
+
+      # Donut kWh
+      fig.add_trace(go.Pie(
+          labels=[spklu_a, spklu_b],
+          values=[summary_a["Total kWh"], summary_b["Total kWh"]],
+          hole=0.6,
+          marker=dict(colors=px.colors.qualitative.Set2),
+          textinfo='percent',
+          showlegend=False
+      ), 1, 2)
+
+      # Donut Pendapatan
+      fig.add_trace(go.Pie(
+          labels=[spklu_a, spklu_b],
+          values=[summary_a["Pendapatan"], summary_b["Pendapatan"]],
+          hole=0.6,
+          marker=dict(colors=px.colors.qualitative.Set2),
+          textinfo='percent',
+          showlegend=False
+      ), 1, 3)
+
+      # Tambahkan judul per chart
+      fig.update_layout(
+          annotations=[
+              dict(text="Transaksi", x=0.11, y=0.5, font_size=14, showarrow=False),
+              dict(text="Total kWh", x=0.50, y=0.5, font_size=14, showarrow=False),
+              dict(text="Pendapatan", x=0.90, y=0.5, font_size=14, showarrow=False)
+          ],
+          legend=dict(
+              orientation="h",
+              yanchor="top",
+              y=-0.2,
+              xanchor="center",
+              x=0.5
+          ),
+      )
+
+      st.plotly_chart(fig, use_container_width=True)
+
+
+
+
+    # ============================
+    # Tab 3 - Perbandingan Wilayah
+    # ============================
+    with tab3:
+        st.subheader("🌍 Perbandingan per Wilayah (ULP)")
+
+        if "Wilayah" in df4.columns:
+            merged = df2.merge(df4, on="Nama SPKLU", how="left")
+
+            pilihan_metric = st.selectbox("Pilih Metric Wilayah", ["Total Pendapatan", "Jumlah KWH", "Jumlah Transaksi"])
+            ulp_group = merged.groupby("Wilayah")[pilihan_metric].sum().reset_index().sort_values(pilihan_metric, ascending=False)
+
+            fig, ax = plt.subplots(figsize=(10, 6))
+            sns.barplot(data=ulp_group, x="Wilayah", y=pilihan_metric, palette="coolwarm", ax=ax)
+            plt.xticks(rotation=45)
+            ax.set_title(f"Perbandingan {pilihan_metric} antar ULP")
+            st.pyplot(fig)
+        else:
+            st.warning("Data4 tidak memiliki kolom ULP")
+
+    # ============================
+    # Tab 4 - Kapasitas & Kategori
+    # ============================
+    with tab4:
+        st.subheader("⚡ Kapasitas & Kategori SPKLU")
+        # --- Agregasi df2: transaksi per SPKLU ---
+        df2_agg = df2.groupby("Nama SPKLU")[["Jumlah Transaksi", "Jumlah KWH", "Total Pendapatan"]].sum().reset_index()
+
+        # --- Agregasi df4: kapasitas max, rata-rata, jumlah tipe, dan kategori tertinggi ---
+        # --- Cleaning kolom Kapasitas jadi numerik ---
+        df4["Kapasitas"] = pd.to_numeric(
+            df4["Kapasitas"]
+                .astype(str)
+                .str.replace("kW", "", regex=False)
+                .str.replace("KW", "", regex=False)
+                .str.replace(",", "", regex=False)
+                .str.extract(r"(\d+)")[0],  # ambil hanya angka
+            errors="coerce"
+        )
+        # Mapping ranking kategori
+        kategori_rank = {
+            "Ultra Fast Charging": 3,
+            "Fast Charging": 2,
+            "Medium Charging": 1,
+            "Slow Charging": 0
+        }
+        def pilih_kategori(x):
+            # Buang NaN
+            x = x.dropna()
+            if x.empty:
+                return "Unknown"
+
+            # Map rank hanya yg valid
+            ranks = x.map(kategori_rank).fillna(0)
+
+            # Ambil kategori dengan rank tertinggi
+            best_idx = ranks.idxmax()
+            return x.loc[best_idx]
+
+        df4_agg = df4.groupby("Nama SPKLU").agg({
+            # kapasitas: total + variasi
+            "Kapasitas": ["max", "mean", lambda x: x.nunique()],
+            # kategori: ambil tertinggi
+            "Kategori": pilih_kategori
+        }).reset_index()
+
+        # rename kolom multiindex
+        df4_agg.columns = ["Nama SPKLU", "Kapasitas_Max", "Kapasitas_Mean", "Jumlah_Tipe", "Kategori"]
+        df4_agg = df4_agg.dropna(subset=["Kapasitas_Max", "Kapasitas_Mean"])
+
+        # --- Gabungkan df2 + df4 ---
+        df_merged = pd.merge(df2_agg, df4_agg, on="Nama SPKLU", how="left")
+
+        # --- One-hot encoding kategori ---
+        df_encoded = pd.get_dummies(df_merged, columns=["Kategori"])
+
+        # --- Pilih fitur untuk clustering ---
+        features = [
+            "Jumlah Transaksi",
+            "Jumlah KWH",
+            "Total Pendapatan",
+            "Kapasitas_Max",
+            "Kapasitas_Mean",
+            "Jumlah_Tipe"
+        ] + [col for col in df_encoded.columns if "Kategori_" in col]
+
+        # --- Standardisasi ---
+        from sklearn.preprocessing import StandardScaler
+        scaler = StandardScaler()
+        X_scaled = scaler.fit_transform(df_encoded[features].fillna(0))
+
+        # --- K-Means ---
+        from sklearn.cluster import KMeans
+        kmeans = KMeans(n_clusters=3, random_state=42, n_init=10)
+        df_encoded["Cluster"] = kmeans.fit_predict(X_scaled)
+
+        # Mapping cluster berdasarkan rata-rata pendapatan
+        cluster_order = df_encoded.groupby("Cluster")["Total Pendapatan"].mean().sort_values().index
+        mapping = {cluster_order[0]: "Rendah", cluster_order[1]: "Sedang", cluster_order[2]: "Tinggi"}
+        df_encoded["Level"] = df_encoded["Cluster"].map(mapping)
+
+        # --- Output ---
+        # === Bagian Rekomendasi (kotak kotak per level) ===
+        rekomendasi = {
+            "Tinggi": "SPKLU ini ramai digunakan. Tambah unit charger, upgrade kapasitas, atau buka cabang di lokasi serupa.",
+            "Sedang": "SPKLU memiliki potensi. Dorong dengan promosi, kerjasama merchant, atau peningkatan fasilitas.",
+            "Rendah": "SPKLU relatif sepi. Evaluasi lokasi, cek teknis, atau strategi marketing. Jika tetap rendah, pertimbangkan relokasi."
+        }
+
+        df_tinggi = df_encoded.query("Level == 'Tinggi'").sort_values("Total Pendapatan", ascending=False)
+        df_sedang = df_encoded.query("Level == 'Sedang'").sort_values("Total Pendapatan", ascending=False)
+        df_rendah = df_encoded.query("Level == 'Rendah'").sort_values("Total Pendapatan", ascending=False)
+
+        tinggi = df_tinggi["Nama SPKLU"].tolist()
+        sedang = df_sedang["Nama SPKLU"].tolist()
+        rendah = df_rendah["Nama SPKLU"].tolist()
+
+        col1, col2, col3 = st.columns(3)
+
+        def buat_kotak(judul, data):
+            with st.container():
+                st.markdown(f"### {judul}")
+                st.markdown(
+                    f"""
+                    <div style="border:1px solid #ddd; border-radius:10px; padding:10px;
+                                max-height:200px; overflow-y:auto; background-color:#f5f5f5; margin-bottom:15px;">
+                        {"".join([f"<p style='margin:5px 0;'>{item}</p>" for item in data])}
+                    </div>
+                    <p style='font-weight:bold; margin-top:5px;'>
+                        Jumlah Unit: {len(data)}
+                    </p>
+                    """,
+                    unsafe_allow_html=True
+                )
+
+        with col1:
+            buat_kotak("Tinggi", tinggi)
+
+        with col2:
+            buat_kotak("Sedang", sedang)
+
+        with col3:
+            buat_kotak("Rendah", rendah)
+
+        import plotly.express as px
+        # --- Pilih SPKLU ---
+        spklu_list = df4["Nama SPKLU"].unique()
+        selected_spklu = st.selectbox("Pilih SPKLU", spklu_list)
+
+        # --- Filter data sesuai pilihan ---
+        df_selected = df4[df4["Nama SPKLU"] == selected_spklu]
+
+        col1, col2 = st.columns(2)
+
+        with col1:
+            import plotly.express as px
+
+            # Bar Chart Kapasitas per Kategori
+            fig_bar = px.bar(
+                df_selected,
+                x="Kategori",
+                y="Kapasitas",
+                color="Kategori",
+                text="Kapasitas",
+                title=f"Kapasitas per Kategori - {selected_spklu}",
+                color_discrete_sequence=px.colors.qualitative.Set2
+            )
+            fig_bar.update_traces(textposition="outside")
+            st.plotly_chart(fig_bar, use_container_width=True)
+
+        with col2:
+            import matplotlib.pyplot as plt
+
+            # Donut Chart Kapasitas per Kategori
+            fig, ax = plt.subplots()
+            kapasitas_per_kategori = df_selected.groupby("Kategori")["Kapasitas"].sum()
+            wedges, texts, autotexts = ax.pie(
+                kapasitas_per_kategori,
+                labels=kapasitas_per_kategori.index,
+                autopct='%1.1f%%',
+                startangle=90,
+                wedgeprops=dict(width=0.4)
+            )
+            ax.text(0, 0, f"Total\\n{kapasitas_per_kategori.sum()} kW",
+                    ha='center', va='center', fontsize=12, fontweight='bold')
+            ax.set_title(f"Proporsi Kapasitas - {selected_spklu}")
+            st.pyplot(fig)
+
+    # ============================
+    # Tab 5 - Level Spklu (Klustering berdasarkan level banyak jumlah transaksi)
+    # ============================
+    with tab5:
+        # --- Klustering SPKLU ---
+        st.subheader("Klustering SPKLU (Transaksi, kWh, Pendapatan)")
+
+        # --- Persiapan data ---
+        fitur_group = df2.groupby("Nama SPKLU")[["Jumlah Transaksi", "Jumlah KWH", "Total Pendapatan"]].sum().reset_index()
+
+        from sklearn.preprocessing import StandardScaler
+        from sklearn.cluster import KMeans
+        scaler = StandardScaler()
+        X_scaled = scaler.fit_transform(fitur_group[["Jumlah Transaksi", "Jumlah KWH", "Total Pendapatan"]])
+        kmeans = KMeans(n_clusters=3, random_state=42, n_init="auto")
+        fitur_group["Cluster"] = kmeans.fit_predict(X_scaled)
+
+        # Mapping cluster
+        cluster_order = fitur_group.groupby("Cluster")["Total Pendapatan"].mean().sort_values().index
+        mapping = {cluster_order[0]: "Rendah", cluster_order[1]: "Sedang", cluster_order[2]: "Tinggi"}
+        fitur_group["Level"] = fitur_group["Cluster"].map(mapping)
+
+        # --- Radio Option ---
+        menu = st.radio(
+            "Pilih Faktor Atribut:",
+            ["Transaksi, kWh, Pendapatan", "+ Kapasitas dan Kategori"],
+            horizontal=True
+        )
+        if menu == "Transaksi, kWh, Pendapatan":
+            # === Bagian Rekomendasi (kotak kotak per level) ===
+            rekomendasi = {
+                "Tinggi": "SPKLU ini ramai digunakan. Tambah unit charger, upgrade kapasitas, atau buka cabang di lokasi serupa.",
+                "Sedang": "SPKLU memiliki potensi. Dorong dengan promosi, kerjasama merchant, atau peningkatan fasilitas.",
+                "Rendah": "SPKLU relatif sepi. Evaluasi lokasi, cek teknis, atau strategi marketing. Jika tetap rendah, pertimbangkan relokasi."
+            }
+
+            df_tinggi = fitur_group.query("Level == 'Tinggi'").sort_values("Total Pendapatan", ascending=False)
+            df_sedang = fitur_group.query("Level == 'Sedang'").sort_values("Total Pendapatan", ascending=False)
+            df_rendah = fitur_group.query("Level == 'Rendah'").sort_values("Total Pendapatan", ascending=False)
+            tinggi = df_tinggi["Nama SPKLU"].tolist()
+            sedang = df_sedang["Nama SPKLU"].tolist()
+            rendah = df_rendah["Nama SPKLU"].tolist()
+
+            col1, col2, col3 = st.columns(3)
+
+            def buat_kotak(judul, data):
+                with st.container():
+                    st.markdown(f"### {judul}")
+                    st.markdown(
+                        f"""
+                        <div style="border:1px solid #ddd; border-radius:10px; padding:10px;
+                                    max-height:200px; overflow-y:auto; background-color:#f5f5f5; margin-bottom:15px;">
+                            {"".join([f"<p style='margin:5px 0;'>{item}</p>" for item in data])}
+                        </div>
+                        <p style='font-weight:bold; margin-top:5px;'>
+                            Jumlah Unit: {len(data)}
+                        </p>
+                        """,
+                        unsafe_allow_html=True
+                    )
+
+            with col1:
+                buat_kotak("Tinggi", tinggi)
+
+            with col2:
+                buat_kotak("Sedang", sedang)
+
+            with col3:
+                buat_kotak("Rendah", rendah)
+
+            st.markdown("---")
+
+            # === Layout Bawah: Scatter kiri & Pie kanan ===
+            col_left, col_right = st.columns([2, 1])  # scatter lebih lebar
+
+            with col_left:
+                import plotly.express as px
+                label_map = {
+                    "Tinggi": "Intensitas Tinggi (ramai digunakan)",
+                    "Sedang": "Intensitas Sedang (potensial berkembang)",
+                    "Rendah": "Intensitas Rendah (sepi penggunaan)"
+                }
+                fitur_group["Level Deskriptif"] = fitur_group["Level"].map(label_map)
+
+                fig1 = px.scatter(
+                    fitur_group,
+                    x="Jumlah Transaksi",
+                    y="Jumlah KWH",
+                    size="Total Pendapatan",
+                    color="Level Deskriptif",
+                    hover_data=["Nama SPKLU"],
+                    color_discrete_map={
+                        "Intensitas Rendah (sepi penggunaan)": "lightcoral",
+                        "Intensitas Sedang (potensial berkembang)": "gold",
+                        "Intensitas Tinggi (ramai digunakan)": "seagreen"
+                    },
+                    category_orders={"Level Deskriptif": [
+                        "Intensitas Tinggi (ramai digunakan)",
+                        "Intensitas Sedang (potensial berkembang)",
+                        "Intensitas Rendah (sepi penggunaan)"]
+                    }
+                )
+                st.plotly_chart(fig1, use_container_width=True, key="scatter_plot")
+
+            with col_right:
+                import matplotlib.pyplot as plt
+                fig2, ax2 = plt.subplots()
+                level_count = fitur_group["Level"].value_counts()
+
+                wedges, texts, autotexts = ax2.pie(
+                    level_count,
+                    labels=level_count.index,
+                    autopct='%1.1f%%',
+                    colors=["lightcoral", "gold", "seagreen"],
+                    startangle=90,
+                    wedgeprops=dict(width=0.4)  # donut
+                )
+
+                ax2.text(0, 0, "Total\\n" + str(level_count.sum()), ha='center', va='center', fontsize=12, fontweight='bold')
+                ax2.set_title("Proporsi SPKLU per Level")
+                st.pyplot(fig2)
+
+        elif menu == "+ Kapasitas dan Kategori":
+            # --- Agregasi df2: transaksi per SPKLU ---
+            df2_agg = df2.groupby("Nama SPKLU")[["Jumlah Transaksi", "Jumlah KWH", "Total Pendapatan"]].sum().reset_index()
+
+            # --- Agregasi df4: kapasitas max, rata-rata, jumlah tipe, dan kategori tertinggi ---
+            # --- Cleaning kolom Kapasitas jadi numerik ---
+            df4["Kapasitas"] = pd.to_numeric(
+                df4["Kapasitas"]
+                    .astype(str)
+                    .str.replace("kW", "", regex=False)
+                    .str.replace("KW", "", regex=False)
+                    .str.replace(",", "", regex=False)
+                    .str.extract(r"(\d+)")[0],  # ambil hanya angka
+                errors="coerce"
+            )
+            # Mapping ranking kategori
+            kategori_rank = {
+                "Ultra Fast Charging": 3,
+                "Fast Charging": 2,
+                "Medium Charging": 1,
+                "Slow Charging": 0
+            }
+            def pilih_kategori(x):
+                # Buang NaN
+                x = x.dropna()
+                if x.empty:
+                    return "Unknown"
+
+                # Map rank hanya yg valid
+                ranks = x.map(kategori_rank).fillna(0)
+
+                # Ambil kategori dengan rank tertinggi
+                best_idx = ranks.idxmax()
+                return x.loc[best_idx]
+
+            df4_agg = df4.groupby("Nama SPKLU").agg({
+                # kapasitas: total + variasi
+                "Kapasitas": ["max", "mean", lambda x: x.nunique()],
+                # kategori: ambil tertinggi
+                "Kategori": pilih_kategori
+            }).reset_index()
+
+            # rename kolom multiindex
+            df4_agg.columns = ["Nama SPKLU", "Kapasitas_Max", "Kapasitas_Mean", "Jumlah_Tipe", "Kategori"]
+            df4_agg = df4_agg.dropna(subset=["Kapasitas_Max", "Kapasitas_Mean"])
+
+            # --- Gabungkan df2 + df4 ---
+            df_merged = pd.merge(df2_agg, df4_agg, on="Nama SPKLU", how="left")
+
+            # --- One-hot encoding kategori ---
+            df_encoded = pd.get_dummies(df_merged, columns=["Kategori"])
+
+            # --- Pilih fitur untuk clustering ---
+            features = [
+                "Jumlah Transaksi",
+                "Jumlah KWH",
+                "Total Pendapatan",
+                "Kapasitas_Max",
+                "Kapasitas_Mean",
+                "Jumlah_Tipe"
+            ] + [col for col in df_encoded.columns if "Kategori_" in col]
+
+            # --- Standardisasi ---
+            from sklearn.preprocessing import StandardScaler
+            scaler = StandardScaler()
+            X_scaled = scaler.fit_transform(df_encoded[features].fillna(0))
+
+            # --- K-Means ---
+            from sklearn.cluster import KMeans
+            kmeans = KMeans(n_clusters=3, random_state=42, n_init=10)
+            df_encoded["Cluster"] = kmeans.fit_predict(X_scaled)
+
+            # Mapping cluster berdasarkan rata-rata pendapatan
+            cluster_order = df_encoded.groupby("Cluster")["Total Pendapatan"].mean().sort_values().index
+            mapping = {cluster_order[0]: "Rendah", cluster_order[1]: "Sedang", cluster_order[2]: "Tinggi"}
+            df_encoded["Level"] = df_encoded["Cluster"].map(mapping)
+
+            # --- Output ---
+            # === Bagian Rekomendasi (kotak kotak per level) ===
+            rekomendasi = {
+                "Tinggi": "SPKLU ini ramai digunakan. Tambah unit charger, upgrade kapasitas, atau buka cabang di lokasi serupa.",
+                "Sedang": "SPKLU memiliki potensi. Dorong dengan promosi, kerjasama merchant, atau peningkatan fasilitas.",
+                "Rendah": "SPKLU relatif sepi. Evaluasi lokasi, cek teknis, atau strategi marketing. Jika tetap rendah, pertimbangkan relokasi."
+            }
+
+            df_tinggi = df_encoded.query("Level == 'Tinggi'").sort_values("Total Pendapatan", ascending=False)
+            df_sedang = df_encoded.query("Level == 'Sedang'").sort_values("Total Pendapatan", ascending=False)
+            df_rendah = df_encoded.query("Level == 'Rendah'").sort_values("Total Pendapatan", ascending=False)
+
+            tinggi = df_tinggi["Nama SPKLU"].tolist()
+            sedang = df_sedang["Nama SPKLU"].tolist()
+            rendah = df_rendah["Nama SPKLU"].tolist()
+
+            col1, col2, col3 = st.columns(3)
+
+            def buat_kotak(judul, data):
+                with st.container():
+                    st.markdown(f"### {judul}")
+                    st.markdown(
+                        f"""
+                        <div style="border:1px solid #ddd; border-radius:10px; padding:10px;
+                                    max-height:200px; overflow-y:auto; background-color:#f5f5f5; margin-bottom:15px;">
+                            {"".join([f"<p style='margin:5px 0;'>{item}</p>" for item in data])}
+                        </div>
+                        <p style='font-weight:bold; margin-top:5px;'>
+                            Jumlah Unit: {len(data)}
+                        </p>
+                        """,
+                        unsafe_allow_html=True
+                    )
+
+            with col1:
+                buat_kotak("Tinggi", tinggi)
+
+            with col2:
+                buat_kotak("Sedang", sedang)
+
+            with col3:
+                buat_kotak("Rendah", rendah)
+
+            st.markdown("---")
+
+            # === Layout Bawah: PCA (kiri) & Donut (kanan) ===
+            col_left, col_right = st.columns([2, 1])
+
+            with col_left:
+                from sklearn.decomposition import PCA
+                import plotly.express as px
+
+                # --- PCA ---
+                pca = PCA(n_components=2)
+                X_pca = pca.fit_transform(X_scaled)
+
+                df_encoded["PC1"] = X_pca[:, 0]
+                df_encoded["PC2"] = X_pca[:, 1]
+
+                fig_pca = px.scatter(
+                    df_encoded,
+                    x="PC1", y="PC2",
+                    color="Level",
+                    hover_data=["Nama SPKLU", "Total Pendapatan", "Jumlah KWH"],
+                    title="Visualisasi Clustering SPKLU dengan PCA (2D Projection)"
+                )
+                st.plotly_chart(fig_pca, use_container_width=True, key="scatter_pca")
+
+            with col_right:
+                import matplotlib.pyplot as plt
+                fig2, ax2 = plt.subplots()
+                level_count = df_encoded["Level"].value_counts()
+
+                wedges, texts, autotexts = ax2.pie(
+                    level_count,
+                    labels=level_count.index,
+                    autopct='%1.1f%%',
+                    colors=["lightcoral", "gold", "seagreen"],
+                    startangle=90,
+                    wedgeprops=dict(width=0.4)
+                )
+
+                ax2.text(0, 0, "Total\\n" + str(level_count.sum()), ha='center', va='center', fontsize=12, fontweight='bold')
+                ax2.set_title("Proporsi SPKLU per Level")
+                st.pyplot(fig2)
+
+            import plotly.express as px
+
+
+            # --- Pilih SPKLU ---
+            spklu_list = df4["Nama SPKLU"].unique()
+            selected_spklu = st.selectbox("Pilih SPKLU", spklu_list)
+
+            # --- Filter data sesuai pilihan ---
+            df_selected = df4[df4["Nama SPKLU"] == selected_spklu]
+
+            col1, col2 = st.columns(2)
+
+            with col1:
+                import plotly.express as px
+
+                # Bar Chart Kapasitas per Kategori
+                fig_bar = px.bar(
+                    df_selected,
+                    x="Kategori",
+                    y="Kapasitas",
+                    color="Kategori",
+                    text="Kapasitas",
+                    title=f"Kapasitas per Kategori - {selected_spklu}",
+                    color_discrete_sequence=px.colors.qualitative.Set2
+                )
+                fig_bar.update_traces(textposition="outside")
+                st.plotly_chart(fig_bar, use_container_width=True)
+
+            with col2:
+                import matplotlib.pyplot as plt
+
+                # Donut Chart Kapasitas per Kategori
+                fig, ax = plt.subplots()
+                kapasitas_per_kategori = df_selected.groupby("Kategori")["Kapasitas"].sum()
+                wedges, texts, autotexts = ax.pie(
+                    kapasitas_per_kategori,
+                    labels=kapasitas_per_kategori.index,
+                    autopct='%1.1f%%',
+                    startangle=90,
+                    wedgeprops=dict(width=0.4)
+                )
+                ax.text(0, 0, f"Total\\n{kapasitas_per_kategori.sum()} kW",
+                        ha='center', va='center', fontsize=12, fontweight='bold')
+                ax.set_title(f"Proporsi Kapasitas - {selected_spklu}")
+                st.pyplot(fig)
 
 
 
@@ -520,75 +991,107 @@ elif selected == "Prediksi":
     st.title('Prediksi Jumlah Transaksi Harian SPKLU')
     st.write("Memprediksi jumlah transaksi SPKLU untuk beberapa hari ke depan menggunakan model ARIMA.")
 
-    df_valid_dates = df.dropna(subset=['TGL BAYAR'])
+    # ==== Load Dataset ====
+    url_data3 = "https://docs.google.com/spreadsheets/d/16cyvXwvucVb7EM1qiikZpbK8J8isbktuiw-MR1EJDEY/export?format=csv&gid=1874488223"
+    df3 = pd.read_csv(url_data3)
 
-    if not df_valid_dates.empty:
-        df_valid_dates['Tanggal'] = df_valid_dates['TGL BAYAR'].dt.date
-        transaksi_per_hari = df_valid_dates.groupby('Tanggal')['No'].nunique().reset_index()
-        transaksi_per_hari = transaksi_per_hari.rename(columns={'No': 'jumlah_transaksi'})
-        transaksi_per_hari['Tanggal'] = pd.to_datetime(transaksi_per_hari['Tanggal'])
-        transaksi_per_hari = transaksi_per_hari.sort_values(by='Tanggal')
+    # Pastikan kolom TGL BAYAR ada
+    if "TGL BAYAR" in df3.columns:
+        # Buang data kosong di kolom tanggal
+        df_valid_dates = df3.dropna(subset=['TGL BAYAR']).copy()
 
-        st.subheader('Tren Harian Total Transaksi SPKLU (Data Historis)')
-        fig, ax = plt.subplots(figsize=(15, 6))
-        sns.lineplot(x='Tanggal', y='jumlah_transaksi', data=transaksi_per_hari, ax=ax)
-        ax.set_title('Tren Harian Total Transaksi SPKLU')
-        ax.set_xlabel('Tanggal Pembayaran')
-        ax.set_ylabel('Jumlah Transaksi')
-        plt.xticks(rotation=45)
-        plt.tight_layout()
-        st.pyplot(fig)
-        plt.close(fig)
+        if not df_valid_dates.empty:
+            # Konversi ke datetime
+            df_valid_dates['TGL BAYAR'] = pd.to_datetime(df_valid_dates['TGL BAYAR'], errors='coerce')
 
+            # Ambil tanggal saja
+            df_valid_dates['Tanggal'] = df_valid_dates['TGL BAYAR'].dt.date
 
-        st.subheader('Prediksi Jumlah Transaksi Harian')
+            # Hitung jumlah transaksi unik per hari
+            transaksi_per_hari = (
+                df_valid_dates.groupby('Tanggal')['No'].nunique().reset_index()
+            )
+            transaksi_per_hari = transaksi_per_hari.rename(columns={'No': 'jumlah_transaksi'})
+            transaksi_per_hari['Tanggal'] = pd.to_datetime(transaksi_per_hari['Tanggal'])
+            transaksi_per_hari = transaksi_per_hari.sort_values(by='Tanggal')
 
-        if len(transaksi_per_hari) >= 2:
-            time_series_data = transaksi_per_hari.set_index('Tanggal')['jumlah_transaksi']
+            # === Visualisasi Tren Historis ===
+            st.subheader('Tren Harian Total Transaksi SPKLU (Data Historis)')
+            fig, ax = plt.subplots(figsize=(15, 6))
+            sns.lineplot(x='Tanggal', y='jumlah_transaksi', data=transaksi_per_hari, ax=ax)
+            ax.set_title('Tren Harian Total Transaksi SPKLU')
+            ax.set_xlabel('Tanggal Pembayaran')
+            ax.set_ylabel('Jumlah Transaksi')
+            plt.xticks(rotation=45)
+            plt.tight_layout()
+            st.pyplot(fig)
+            plt.close(fig)
 
-            p, d, q = 5, 1, 0
-            days_to_predict = st.slider('Pilih jumlah hari ke depan untuk diprediksi', 1, 30, 7)
+            # === Prediksi ARIMA ===
+            st.subheader('Prediksi Jumlah Transaksi Harian')
 
-            try:
-                model = ARIMA(time_series_data, order=(p, d, q))
-                model_fit = model.fit()
+            if len(transaksi_per_hari) >= 2:
+                time_series_data = transaksi_per_hari.set_index('Tanggal')['jumlah_transaksi']
 
-                last_date = time_series_data.index[-1]
-                forecast_index = pd.date_range(start=last_date + pd.Timedelta(days=1), periods=days_to_predict, freq='D')
-                forecast = model_fit.predict(start=len(time_series_data), end=len(time_series_data) + days_to_predict - 1)
-                forecast.index = forecast_index
+                # Parameter ARIMA (default)
+                p, d, q = 5, 1, 0
+                days_to_predict = st.slider('Pilih jumlah hari ke depan untuk diprediksi', 1, 30, 7)
 
-                st.write(f"Prediksi Jumlah Transaksi untuk {days_to_predict} Hari ke Depan:")
-                st.dataframe(forecast.reset_index().rename(columns={'index': 'Tanggal', 'predicted_mean': 'Jumlah Prediksi'}))
+                try:
+                    model = ARIMA(time_series_data, order=(p, d, q))
+                    model_fit = model.fit()
 
-                fig, ax = plt.subplots(figsize=(15, 6))
-                ax.plot(time_series_data.index, time_series_data.values, label='Data Historis')
-                ax.plot(forecast.index, forecast.values, label='Prediksi', color='red')
-                ax.set_title(f'Tren Harian Total Transaksi SPKLU dengan Prediksi ({days_to_predict} Hari ke Depan)')
-                ax.set_xlabel('Tanggal')
-                ax.set_ylabel('Jumlah Transaksi')
-                plt.xticks(rotation=45)
-                ax.legend()
-                plt.tight_layout()
-                st.pyplot(fig)
-                plt.close(fig)
+                    last_date = time_series_data.index[-1]
+                    forecast_index = pd.date_range(
+                        start=last_date + pd.Timedelta(days=1),
+                        periods=days_to_predict,
+                        freq='D'
+                    )
+                    forecast = model_fit.predict(
+                        start=len(time_series_data),
+                        end=len(time_series_data) + days_to_predict - 1
+                    )
+                    forecast.index = forecast_index
 
-            except Exception as e:
-                st.error(f"Terjadi kesalahan saat fitting atau forecasting model ARIMA: {e}")
-                st.warning("Kemungkinan data tidak cocok untuk order ARIMA ini atau jumlah data terlalu sedikit.")
+                    st.write(f"Prediksi Jumlah Transaksi untuk {days_to_predict} Hari ke Depan:")
+                    st.dataframe(
+                        forecast.reset_index().rename(
+                            columns={'index': 'Tanggal', 'predicted_mean': 'Jumlah Prediksi'}
+                        ),
+                        hide_index=True  # ini untuk sembunyikan index
+                    )
+
+                    fig, ax = plt.subplots(figsize=(15, 6))
+                    ax.plot(time_series_data.index, time_series_data.values, label='Data Historis')
+                    ax.plot(forecast.index, forecast.values, label='Prediksi', color='red')
+                    ax.set_title(f'Tren Harian Total Transaksi SPKLU dengan Prediksi ({days_to_predict} Hari ke Depan)')
+                    ax.set_xlabel('Tanggal')
+                    ax.set_ylabel('Jumlah Transaksi')
+                    plt.xticks(rotation=45)
+                    ax.legend()
+                    plt.tight_layout()
+                    st.pyplot(fig)
+                    plt.close(fig)
+
+                except Exception as e:
+                    st.error(f"Terjadi kesalahan saat fitting atau forecasting model ARIMA: {e}")
+                    st.warning("Kemungkinan data tidak cocok untuk order ARIMA ini atau jumlah data terlalu sedikit.")
+
+            else:
+                st.warning("Data transaksi harian yang valid tidak cukup untuk melakukan prediksi (dibutuhkan minimal 2 data point).")
 
         else:
-            st.warning("Data transaksi harian yang valid tidak cukup untuk melakukan prediksi (dibutuhkan minimal 2 data point).")
-
+            st.warning("Tidak ada data tanggal pembayaran yang valid untuk analisis tren.")
     else:
-        st.warning("Tidak ada data tanggal pembayaran yang valid untuk analisis tren.")
+        st.error("Kolom 'TGL BAYAR' tidak ditemukan pada dataset.")
+
 
 elif selected == "Tentang":
     st.title('Tentang Dashboard Ini')
     st.write("""
     Dashboard ini dibuat untuk menganalisis data transaksi SPKLU secara interaktif dan informatif.
 
-    ### 🔌 Apa itu SPKLU?
+    ### Apa itu SPKLU?
     SPKLU (Stasiun Pengisian Kendaraan Listrik Umum) adalah fasilitas yang disediakan untuk mengisi daya baterai kendaraan listrik. SPKLU menjadi bagian penting dalam ekosistem kendaraan listrik di Indonesia untuk mendukung transisi menuju energi bersih dan berkelanjutan.
 
     ### Fitur dalam Dashboard:
