@@ -18,7 +18,7 @@ from statsmodels.tsa.arima.model import ARIMA
 
 st.set_page_config(
     page_title="Dashboard SPKLU",   # tulisan di bar
-    page_icon="logo spklu.png",           # logo custom (bisa file gambar)
+    page_icon="logo spklu2.png",           # logo custom (bisa file gambar)
     layout="wide"
 )
 
