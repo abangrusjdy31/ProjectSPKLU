@@ -320,7 +320,7 @@ elif selected == "Analisis":
         "Compare ULP", 
         "Kapasitas & Kategori",
         "Level Spklu",
-        "Tren",
+        "Tren Bulanan Unit SPKLU",
         "Test3",
         "Test4"
     ])
@@ -1072,7 +1072,12 @@ elif selected == "Analisis":
 
         # Opsional: lihat data
         with st.expander("Lihat Data Tren Bulanan"):
-            st.dataframe(df_tren[["Bulan & Tahun", "Jumlah Transaksi", "Jumlah KWH", "Total Pendapatan"]])
+            st.dataframe(
+            df_tren[["Bulan & Tahun", "Jumlah Transaksi", "Jumlah KWH", "Total Pendapatan"]]
+            .reset_index(drop=True),  # hilangkan index
+            use_container_width=True
+        )
+
 
 
 
