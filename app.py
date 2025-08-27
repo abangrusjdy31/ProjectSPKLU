@@ -99,7 +99,7 @@ with st.sidebar:
             }
         </style>
         <div class="sidebar-footer">
-            © 2025 PLN Kota Bandung
+            © 2025 PLN UP3 Kota Bandung
         </div>
         """,
         unsafe_allow_html=True
