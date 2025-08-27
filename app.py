@@ -370,6 +370,7 @@ elif selected == "Analisis":
 
 
         # Tampilkan grafik berdasarkan pilihan
+        st.write("Jumlah Transaksi Terbanyak")
         plot_ranking(df2, "Jumlah Transaksi", "SPKLU", "#FFBD31", pilihan_ranking)        
         plot_ranking(df2, "Jumlah KWH", "SPKLU", "lightgreen", pilihan_ranking)
         plot_ranking(df2, "Total Pendapatan", "SPKLU", "#FA8072", pilihan_ranking)
