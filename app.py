@@ -21,9 +21,6 @@ st.set_page_config(
     page_icon="logo spklu2.png",           # logo custom (bisa file gambar)
     layout="wide"
 )
-
-st.title("Dashboard SPKLU")
-
     
 # Optional: use wide layout
 st.set_page_config(layout="wide")
