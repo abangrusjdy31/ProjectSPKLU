@@ -616,6 +616,32 @@ elif selected == "Analisis":
             "Pendapatan": float(data_b["Total Pendapatan"].sum())
         }
 
+        # Buat mapping warna sesuai wilayah
+        warna_map = {
+            wilayah_a: px.colors.qualitative.Set2[0],
+            wilayah_b: px.colors.qualitative.Set2[1]
+        }
+
+        # Tabel ringkasan dengan warna index
+        df_summary = pd.DataFrame([summary_a, summary_b], index=[wilayah_a, wilayah_b])
+
+        def color_index(val):
+            color = warna_map.get(val, "black")
+            return f"color: {color}; font-weight:bold"
+    
+        styled_df = (
+            df_summary.style
+            .set_table_styles(
+                [
+                    {"selector": "th.row_heading", "props": [("text-align", "left"), ("padding", "4px")]},
+                    {"selector": "th.col_heading", "props": [("background-color", "#f5f5f5"), ("padding", "4px")]},
+                    {"selector": "td", "props": [("padding", "4px")]}
+                ]
+            )
+            .apply_index(color_index, axis=0)
+            .format("{:,.0f}")
+        )
+
         # Tabel ringkasan
         st.subheader("Ringkasan Perbandingan ULP di Kota Bandung")
         st.dataframe(pd.DataFrame([summary_a, summary_b], index=[wilayah_a, wilayah_b]))
