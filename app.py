@@ -1096,6 +1096,9 @@ elif selected == "Analisis":
 
 
 
+# ======================
+# PREDIKSI
+# ======================
 elif selected == "Prediksi":
     st.title("Prediksi Jumlah Transaksi SPKLU")
     st.write("Prediksi menggunakan model Machine Learning (XGBoost) dan Prophet (opsional).")
@@ -1105,18 +1108,15 @@ elif selected == "Prediksi":
     df5 = pd.read_csv(url_data5)
     df5.columns = df5.columns.str.strip()
 
-    # Pastikan kolom tanggal ada
     if "TGL BAYAR" not in df5.columns:
         st.error("Kolom 'TGL BAYAR' tidak ditemukan pada dataset.")
         st.stop()
 
-    # Bersihkan tanggal
     df5 = df5.dropna(subset=["TGL BAYAR"]).copy()
     df5["TGL BAYAR"] = pd.to_datetime(df5["TGL BAYAR"], errors="coerce")
     df5 = df5.dropna(subset=["TGL BAYAR"])
     df5["Tanggal"] = df5["TGL BAYAR"].dt.normalize()
 
-    # Hitung jumlah transaksi unik per hari
     if "No" in df5.columns:
         daily = df5.groupby("Tanggal")["No"].nunique().rename("y").reset_index()
     else:
@@ -1136,31 +1136,38 @@ elif selected == "Prediksi":
     with sub1:
         from xgboost import XGBRegressor
         st.subheader("Prediksi Harian (XGBoost)")
+
         s = daily.set_index("Tanggal")["y"].asfreq("D").fillna(0)
 
-        # visualisasi historis
+        # Visualisasi historis
         fig, ax = plt.subplots(figsize=(15, 4))
         ax.plot(s.index, s.values, marker="o")
         ax.set_title("Tren Harian — Jumlah Transaksi")
         plt.xticks(rotation=45); plt.tight_layout()
         st.pyplot(fig)
 
-        # fitur waktu + lag
+        # Fitur waktu + lag
         df_feat = s.to_frame().reset_index().rename(columns={"Tanggal": "ds", "y": "y"})
         df_feat["dayofweek"] = df_feat["ds"].dt.dayofweek
         df_feat["month"] = df_feat["ds"].dt.month
         for L in [1, 2, 3, 7]:
             df_feat[f"lag{L}"] = df_feat["y"].shift(L)
         df_feat = df_feat.dropna().reset_index(drop=True)
-
         FEATURES = ["dayofweek", "month", "lag1", "lag2", "lag3", "lag7"]
 
-        model = XGBRegressor(
-            n_estimators=500, learning_rate=0.05, max_depth=6,
-            random_state=42, n_jobs=0
-        )
-        model.fit(df_feat[FEATURES], df_feat["y"])
+        # Cache model harian
+        @st.cache_resource
+        def train_daily_model(df_feat, FEATURES):
+            model = XGBRegressor(
+                n_estimators=500, learning_rate=0.05, max_depth=6,
+                random_state=42, n_jobs=0
+            )
+            model.fit(df_feat[FEATURES], df_feat["y"])
+            return model
 
+        model = train_daily_model(df_feat, FEATURES)
+
+        # Forecast
         horizon = st.slider("Horizon prediksi (hari)", 1, 30, 7)
         last_ds = df_feat["ds"].iloc[-1]
         series = df_feat.set_index("ds")["y"].copy()
@@ -1194,7 +1201,6 @@ elif selected == "Prediksi":
     with sub2:
         st.subheader("Prediksi Bulanan")
         df5["Periode"] = df5["TGL BAYAR"].dt.to_period("M").dt.to_timestamp(how="start")
-
         monthly = df5.groupby("Periode")["No"].nunique().rename("y").reset_index()
 
         if len(monthly) < 6:
@@ -1219,12 +1225,20 @@ elif selected == "Prediksi":
             dfm = dfm.dropna().reset_index(drop=True)
 
             FEATURES_M = ["month", "year", "lag1", "lag2", "lag3", "lag6", "lag12"]
-            model_m = XGBRegressor(
-                n_estimators=800, learning_rate=0.05, max_depth=6,
-                random_state=42, n_jobs=0
-            )
-            model_m.fit(dfm[FEATURES_M], dfm["y"])
 
+            # Cache model bulanan
+            @st.cache_resource
+            def train_monthly_model(dfm, FEATURES_M):
+                model_m = XGBRegressor(
+                    n_estimators=800, learning_rate=0.05, max_depth=6,
+                    random_state=42, n_jobs=0
+                )
+                model_m.fit(dfm[FEATURES_M], dfm["y"])
+                return model_m
+
+            model_m = train_monthly_model(dfm, FEATURES_M)
+
+            # Forecast
             last_ds = dfm["ds"].iloc[-1]
             cur = dfm.set_index("ds")["y"].copy()
             preds_m = []
