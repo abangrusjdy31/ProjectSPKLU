@@ -151,7 +151,7 @@ if selected == "Menu Utama":
     def plot_top5(df, kolom, judul, warna):
         top5 = df.groupby("Nama SPKLU")[kolom].sum().nlargest(5).sort_values()
         fig, ax = plt.subplots(figsize=(8, 5))
-        bars = ax.barh(top5.index, top5.values, color=warna)
+        bars = ax.barh(top5.index, top5.values, color="D8F9FF")
         ax.set_title(judul, fontsize=14, weight="bold")
         ax.set_xlabel(kolom, fontsize=12)
         ax.set_ylabel("SPKLU", fontsize=12)
