@@ -447,24 +447,24 @@ elif selected == "Analisis":
       }
 
       # Buat dataframe ringkasan
-        df_summary = pd.DataFrame([summary_a, summary_b], index=[spklu_a, spklu_b])
-        
-        # Styling dataframe
-        styled_df = (
-            df_summary.style
-            .set_table_styles(
-                [
-                    {"selector": "th", "props": [("background-color", "#D9F9FF"), ("color", "black"), ("font-weight", "bold")]},
-                    {"selector": "td", "props": [("padding", "8px")]},
-                ]
-            )
-            .highlight_max(axis=0, color="#FFCDD2")  # highlight nilai terbesar per kolom
-            .highlight_min(axis=0, color="#C8E6C9")  # highlight nilai terkecil per kolom
-            .format("{:,.0f}")  # format angka dengan pemisah ribuan
-        )
-        
-        st.subheader("Ringkasan Perbandingan")
-        st.dataframe(styled_df, use_container_width=True)
+      df_summary = pd.DataFrame([summary_a, summary_b], index=[spklu_a, spklu_b])
+
+      # Styling dataframe
+      styled_df = (
+          df_summary.style
+          .set_table_styles(
+              [
+                  {"selector": "th", "props": [("background-color", "#D9F9FF"), ("color", "black"), ("font-weight", "bold")]},
+                  {"selector": "td", "props": [("padding", "8px")]},
+              ]
+          )
+          .highlight_max(axis=0, color="#FFCDD2")  # highlight nilai terbesar per kolom
+          .highlight_min(axis=0, color="#C8E6C9")  # highlight nilai terkecil per kolom
+          .format("{:,.0f}")  # format angka dengan pemisah ribuan
+      )
+      st.subheader("Ringkasan Perbandingan")
+      st.dataframe(styled_df, use_container_width=True)
+
 
       # Buat subplot 1 baris 3 kolom
       fig = make_subplots(rows=1, cols=3, specs=[[{'type':'domain'}, {'type':'domain'}, {'type':'domain'}]])
