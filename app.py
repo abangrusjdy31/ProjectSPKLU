@@ -469,6 +469,11 @@ elif selected == "Analisis":
       # Buat dataframe ringkasan
       df_summary = pd.DataFrame([summary_a, summary_b], index=[spklu_a, spklu_b])
 
+      # Fungsi untuk warnai index sesuai SPKLU
+      def color_index(val):
+          color = warna_map.get(val, "black")
+          return f"color: {color}; font-weight:bold"
+
       # Styling dataframe -> warnai index sesuai donut
       styled_df = (
           df_summary.style
