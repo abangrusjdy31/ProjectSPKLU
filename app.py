@@ -642,22 +642,21 @@ elif selected == "Analisis":
             .format("{:,.0f}")
         )
 
-        # Tabel ringkasan
         st.subheader("Ringkasan Perbandingan ULP di Kota Bandung")
-        st.dataframe(pd.DataFrame([summary_a, summary_b], index=[wilayah_a, wilayah_b]))
-
+        st.dataframe(styled_df, use_container_width=True)
+    
         # Donut chart (mirip perbandingan SPKLU)
         fig = make_subplots(rows=1, cols=3, specs=[[{'type':'domain'}, {'type':'domain'}, {'type':'domain'}]])
-
+    
         fig.add_trace(go.Pie(labels=[wilayah_a, wilayah_b], values=[summary_a["Jumlah Transaksi"], summary_b["Jumlah Transaksi"]],
-                            hole=0.6, marker=dict(colors=px.colors.qualitative.Set2), textinfo='percent', showlegend=True), 1, 1)
-
+                            hole=0.6, marker=dict(colors=[warna_map[wilayah_a], warna_map[wilayah_b]]), textinfo='percent', showlegend=True), 1, 1)
+    
         fig.add_trace(go.Pie(labels=[wilayah_a, wilayah_b], values=[summary_a["Total kWh"], summary_b["Total kWh"]],
-                            hole=0.6, marker=dict(colors=px.colors.qualitative.Set2), textinfo='percent', showlegend=False), 1, 2)
-
+                            hole=0.6, marker=dict(colors=[warna_map[wilayah_a], warna_map[wilayah_b]]), textinfo='percent', showlegend=False), 1, 2)
+    
         fig.add_trace(go.Pie(labels=[wilayah_a, wilayah_b], values=[summary_a["Pendapatan"], summary_b["Pendapatan"]],
-                            hole=0.6, marker=dict(colors=px.colors.qualitative.Set2), textinfo='percent', showlegend=False), 1, 3)
-
+                            hole=0.6, marker=dict(colors=[warna_map[wilayah_a], warna_map[wilayah_b]]), textinfo='percent', showlegend=False), 1, 3)
+    
         fig.update_layout(
             annotations=[
                 dict(text="Transaksi", x=0.11, y=0.5, font_size=14, showarrow=False),
@@ -666,7 +665,7 @@ elif selected == "Analisis":
             ],
             legend=dict(orientation="h", yanchor="top", y=-0.2, xanchor="center", x=0.5),
         )
-
+    
         st.plotly_chart(fig, use_container_width=True)
 
     # ============================
