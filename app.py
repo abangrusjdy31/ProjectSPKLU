@@ -356,8 +356,12 @@ elif selected == "Analisis":
             data.plot(kind="barh", color=warna, ax=ax)
         
             # Tambahan styling
-            ax.set_xlabel(kolom, fontsize=12, weight="bold")
+            ax.set_xlabel("")   # Hapus keterangan bawah (xlabel)
             ax.set_ylabel("")
+        
+            # Judul ditaruh tengah atas
+            ax.set_title(kolom, fontsize=14, weight="bold", loc="center", pad=15)
+        
             ax.tick_params(axis="x", labelsize=10)
             ax.tick_params(axis="y", labelsize=10)
             ax.grid(axis="x", linestyle="--", alpha=0.5)
