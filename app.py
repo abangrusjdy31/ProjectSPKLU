@@ -766,10 +766,19 @@ elif selected == "Analisis":
 
         col1, col2 = st.columns(2)
 
+        # ambil palet Set2 dari plotly
+        set2_colors = px.colors.qualitative.Set2
+        color_map = {
+            "Standard": set2_colors[0],   # hijau (#66c2a5)
+            "Medium": set2_colors[1],     # oranye (#fc8d62)
+            "Fast": set2_colors[2],       # ungu kebiruan (#8da0cb)
+            "Ultra Fast": set2_colors[3]  # kuning (#e78ac3)
+        }
+
 
         with col1:
             import plotly.express as px
-            kategori_order = ["Standar", "Medium", "Fast", "Ultra Fast"]
+            kategori_order = ["Standard", "Medium", "Fast", "Ultra Fast"]
 
             fig_bar = px.bar(
                 df_selected,
@@ -778,7 +787,8 @@ elif selected == "Analisis":
                 color="Kategori",
                 text="Kapasitas",
                 title=f"Kapasitas per Kategori - {selected_spklu}",
-                color_discrete_sequence=px.colors.qualitative.Set2,
+                #color_discrete_sequence=px.colors.qualitative.Set2,
+                color_discrete_map=color_map,
                 category_orders={"Kategori": kategori_order}
             )
 
@@ -810,7 +820,8 @@ elif selected == "Analisis":
                 hole=0.4,
                 textinfo='percent',
                 texttemplate='<br>%{percent:.1%}',  # tidak menampilkan jumlah unit
-                insidetextfont=dict(color="black")
+                insidetextfont=dict(color="black"),
+                marker=dict(colors=[color_map[k] for k in unit_per_kategori.index])
             )])
 
             # Tambahkan total kapasitas di tengah
