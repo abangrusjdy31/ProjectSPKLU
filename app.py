@@ -726,7 +726,7 @@ elif selected == "Analisis":
                 st.markdown(
                     f"""
                     <div style="border:1px solid #ddd; border-radius:10px; padding:10px;
-                                max-height:200px; overflow-y:auto; background-color:#f5f5f5; margin-bottom:15px;">
+                                max-height:200px; overflow-y:auto; background-color:#FFFFFF; margin-bottom:15px;">
                         {"".join([f"<p style='margin:5px 0;'>{item}</p>" for item in data])}
                     </div>
                     <p style='font-weight:bold; margin-top:5px;'>
@@ -862,7 +862,7 @@ elif selected == "Analisis":
                 st.markdown(
                     f"""
                     <div style="border:1px solid #ddd; border-radius:10px; padding:10px;
-                                max-height:200px; overflow-y:auto; background-color:#f5f5f5; margin-bottom:15px;">
+                                max-height:200px; overflow-y:auto; background-color:#FFFFFF; margin-bottom:15px;">
                         {"".join([f"<p style='margin:5px 0;'>{item}</p>" for item in data])}
                     </div>
                     <p style='font-weight:bold; margin-top:5px;'>
