@@ -462,25 +462,29 @@ elif selected == "Analisis":
           "Pendapatan": float(data_b["Total Pendapatan"].sum())
       }
 
+      # Warna dari donut chart
+      palette = px.colors.qualitative.Set2
+      warna_map = {spklu_a: palette[0], spklu_b: palette[1]}
+      
       # Buat dataframe ringkasan
       df_summary = pd.DataFrame([summary_a, summary_b], index=[spklu_a, spklu_b])
 
-      # Styling dataframe
+      # Styling dataframe -> warnai index sesuai donut
       styled_df = (
           df_summary.style
           .set_table_styles(
               [
-                  {"selector": "th", "props": [("background-color", "#FFFFFF"), ("color", "black"), ("font-weight", "bold")]},
+                  {"selector": "th.col0", "props": [("background-color", "#f5f5f5"), ("font-weight", "bold")]},
                   {"selector": "td", "props": [("padding", "8px")]},
               ]
           )
-          .highlight_max(axis=0, color="#FFCDD2")  # highlight nilai terbesar per kolom
-          .highlight_min(axis=0, color="#C8E6C9")  # highlight nilai terkecil per kolom
-          .format("{:,.0f}")  # format angka dengan pemisah ribuan
+          .apply(lambda x: [f"color: {warna_map.get(i, 'black')}; font-weight:bold" for i in x.index], 
+                 axis=0, subset=pd.IndexSlice[:, :])
+          .format("{:,.0f}")
       )
+
       st.subheader("Ringkasan Perbandingan")
       st.dataframe(styled_df, use_container_width=True)
-
 
       # Buat subplot 1 baris 3 kolom
       fig = make_subplots(rows=1, cols=3, specs=[[{'type':'domain'}, {'type':'domain'}, {'type':'domain'}]])
@@ -490,9 +494,9 @@ elif selected == "Analisis":
           labels=[spklu_a, spklu_b],
           values=[summary_a["Jumlah Transaksi"], summary_b["Jumlah Transaksi"]],
           hole=0.6,
-          marker=dict(colors=px.colors.qualitative.Set2),
+          marker=dict(colors=[warna_map[spklu_a], warna_map[spklu_b]]),
           textinfo='percent',
-          showlegend=True  # legend hanya muncul sekali
+          showlegend=True
       ), 1, 1)
 
       # Donut kWh
@@ -500,7 +504,7 @@ elif selected == "Analisis":
           labels=[spklu_a, spklu_b],
           values=[summary_a["Total kWh"], summary_b["Total kWh"]],
           hole=0.6,
-          marker=dict(colors=px.colors.qualitative.Set2),
+          marker=dict(colors=[warna_map[spklu_a], warna_map[spklu_b]]),
           textinfo='percent',
           showlegend=False
       ), 1, 2)
@@ -510,25 +514,27 @@ elif selected == "Analisis":
           labels=[spklu_a, spklu_b],
           values=[summary_a["Pendapatan"], summary_b["Pendapatan"]],
           hole=0.6,
-          marker=dict(colors=px.colors.qualitative.Set2),
+          marker=dict(colors=[warna_map[spklu_a], warna_map[spklu_b]]),
           textinfo='percent',
           showlegend=False
       ), 1, 3)
 
-      # Tambahkan judul per chart
+      # Tambahkan judul per chart + rapikan layout
       fig.update_layout(
           annotations=[
               dict(text="Transaksi", x=0.11, y=0.5, font_size=14, showarrow=False),
               dict(text="Total kWh", x=0.50, y=0.5, font_size=14, showarrow=False),
               dict(text="Pendapatan", x=0.90, y=0.5, font_size=14, showarrow=False)
-          ],
+          ], 
+          margin=dict(t=20, b=20),
           legend=dict(
               orientation="h",
-              yanchor="top",
-              y=-0.2,
+              yanchor="bottom",
+              y=-0.15,
               xanchor="center",
               x=0.5
           ),
+          height=350
       )
 
       st.plotly_chart(fig, use_container_width=True)
