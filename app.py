@@ -521,7 +521,7 @@ elif selected == "Analisis":
 
 
     # ============================
-    # Tab 3 - Perbandingan Wilayah
+    # Tab 3 - Perbandingan ULP
     # ============================
     with tab3:
         st.subheader("Perbandingan Antar ULP di Kota Bandung")
@@ -944,6 +944,135 @@ elif selected == "Analisis":
         # Fitur 1: Informasi Lebih Lanjut
         with st.expander("Data Awal"):
             st.write("Menampilkan cuplikan awal data transaksi SPKLU yang digunakan dalam analisis.")
+    
+    
+    # ============================
+    # Tab 6 - Tren Bulanan Unit SPKLU
+    # ============================
+    with tab6:
+        st.subheader("Tren Bulanan Unit SPKLU")
+
+        # --- Pastikan kolom waktu tersedia tanpa duplikasi ---
+        if not {"Bulan", "Tahun", "BulanNum"}.issubset(df2.columns):
+            bulan_map = {
+                "Januari": 1, "Februari": 2, "Maret": 3, "April": 4,
+                "Mei": 5, "Juni": 6, "Juli": 7, "Agustus": 8,
+                "September": 9, "Oktober": 10, "November": 11, "Desember": 12
+            }
+            df2[["Bulan", "Tahun"]] = df2["Bulan & Tahun"].str.split(" ", n=1, expand=True)
+            df2["Tahun"] = df2["Tahun"].astype(int)
+            df2["BulanNum"] = df2["Bulan"].map(bulan_map)
+
+        # --- Index bulan terurut + key numerik YYYYMM ---
+        bulan_index = (
+            df2[["Bulan & Tahun", "Bulan", "Tahun", "BulanNum"]]
+            .drop_duplicates()
+            .sort_values(["Tahun", "BulanNum"])
+            .assign(key=lambda d: d["Tahun"] * 100 + d["BulanNum"])
+        )
+        opsi_bulan = bulan_index["Bulan & Tahun"].tolist()
+        bulan2key = dict(zip(bulan_index["Bulan & Tahun"], bulan_index["key"]))
+
+        # --- Pilihan Unit & Rentang Bulan ---
+        c1, c2, c3 = st.columns([2, 1, 1])
+        with c1:
+            selected_spklu = st.selectbox("Pilih Unit SPKLU", sorted(df2["Nama SPKLU"].unique()))
+        with c2:
+            start_bulan = st.selectbox("Bulan Awal", opsi_bulan, index=0)
+        with c3:
+            end_bulan = st.selectbox("Bulan Akhir", opsi_bulan, index=len(opsi_bulan) - 1)
+
+        start_key, end_key = bulan2key[start_bulan], bulan2key[end_bulan]
+        lo, hi = (start_key, end_key) if start_key <= end_key else (end_key, start_key)
+
+        # --- Kalender bulan pada rentang (agar bulan kosong jadi 0) ---
+        kalender = bulan_index.loc[(bulan_index["key"] >= lo) & (bulan_index["key"] <= hi), ["key", "Bulan & Tahun"]]
+
+        # --- Agregasi per bulan untuk unit terpilih ---
+        df_unit = df2[df2["Nama SPKLU"] == selected_spklu].copy()
+        df_unit["key"] = df_unit["Tahun"] * 100 + df_unit["BulanNum"]
+
+        agg = (
+            df_unit.groupby("key", as_index=False)
+            .agg({
+                "Total Pendapatan": "sum",
+                "Jumlah KWH": "sum",
+                "Jumlah Transaksi": "sum"
+            })
+        )
+
+        # --- Gabungkan dengan kalender & isi nol untuk bulan tanpa data ---
+        df_tren = kalender.merge(agg, on="key", how="left").fillna(0.0)
+        df_tren["BulanLabel"] = df_tren["Bulan & Tahun"]  # pakai label Indonesia asli
+        order_x = df_tren["BulanLabel"].tolist()
+
+        import plotly.express as px
+
+        col_a, col_b, col_c = st.columns(3)
+
+        # Grafik 1: Total Pendapatan
+        with col_a:
+            fig_pendapatan = px.line(
+                df_tren, x="BulanLabel", y="Total Pendapatan", markers=True,
+                title="Total Pendapatan",
+                category_orders={"BulanLabel": order_x},
+                color_discrete_sequence=["#FA8072"]
+            )
+            fig_pendapatan.update_traces(
+                line=dict(width=3),
+                marker=dict(size=8),
+                hovertemplate="Periode=%{x}<br>Pendapatan=Rp%{y:,.0f}<extra></extra>"
+            )
+            fig_pendapatan.update_yaxes(tickformat=",")
+            fig_pendapatan.update_layout(margin=dict(t=50, b=10, l=10, r=10),
+                xaxis_title=None,   # Hilangkan label X
+                yaxis_title=None    # Hilangkan label Y
+            )
+            st.plotly_chart(fig_pendapatan, use_container_width=True)
+
+        # Grafik 2: Jumlah KWH
+        with col_b:
+            fig_kwh = px.line(
+                df_tren, x="BulanLabel", y="Jumlah KWH", markers=True,
+                title="Jumlah KWH",
+                category_orders={"BulanLabel": order_x},
+                color_discrete_sequence=["lightgreen"]
+            )
+            fig_kwh.update_traces(
+                line=dict(width=3),
+                marker=dict(size=8),
+                hovertemplate="Periode=%{x}<br>KWH=%{y:,.0f}<extra></extra>"
+            )
+            fig_kwh.update_yaxes(tickformat=",")
+            fig_kwh.update_layout(margin=dict(t=50, b=10, l=10, r=10),
+                xaxis_title=None,   # Hilangkan label X
+                yaxis_title=None    # Hilangkan label Y
+            )
+            st.plotly_chart(fig_kwh, use_container_width=True)
+
+        # Grafik 3: Jumlah Transaksi
+        with col_c:
+            fig_transaksi = px.line(
+                df_tren, x="BulanLabel", y="Jumlah Transaksi", markers=True,
+                title="Jumlah Transaksi",
+                category_orders={"BulanLabel": order_x},
+                color_discrete_sequence=["#FFBD31"]
+            )
+            fig_transaksi.update_traces(
+                line=dict(width=3),
+                marker=dict(size=8),
+                hovertemplate="Periode=%{x}<br>Transaksi=%{y:,.0f}<extra></extra>"
+            )
+            fig_transaksi.update_yaxes(tickformat=",")
+            fig_transaksi.update_layout(margin=dict(t=50, b=10, l=10, r=10),
+                xaxis_title=None,   # Hilangkan label X
+                yaxis_title=None    # Hilangkan label Y
+            )
+            st.plotly_chart(fig_transaksi, use_container_width=True)
+
+        # Opsional: lihat data
+        with st.expander("Lihat Data Tren Bulanan"):
+            st.dataframe(df_tren[["Bulan & Tahun", "Jumlah Transaksi", "Jumlah KWH", "Total Pendapatan"]])
 
 
 
