@@ -1095,102 +1095,168 @@ elif selected == "Analisis":
 
 
 elif selected == "Prediksi":
-    st.title('Prediksi Jumlah Transaksi Harian SPKLU')
-    st.write("Memprediksi jumlah transaksi SPKLU untuk beberapa hari ke depan menggunakan model ARIMA.")
+    st.title("Prediksi Jumlah Transaksi SPKLU")
+    st.write("Prediksi menggunakan model Machine Learning (XGBoost) dan Prophet (opsional).")
 
     # ==== Load Dataset ====
-    url_data3 = "https://docs.google.com/spreadsheets/d/16cyvXwvucVb7EM1qiikZpbK8J8isbktuiw-MR1EJDEY/export?format=csv&gid=1874488223"
-    df3 = pd.read_csv(url_data3)
+    url_data5 = "https://docs.google.com/spreadsheets/d/16cyvXwvucVb7EM1qiikZpbK8J8isbktuiw-MR1EJDEY/export?format=csv&gid=2075790964"
+    df5 = pd.read_csv(url_data5)
+    df5.columns = df5.columns.str.strip()
 
-    # Pastikan kolom TGL BAYAR ada
-    if "TGL BAYAR" in df3.columns:
-        # Buang data kosong di kolom tanggal
-        df_valid_dates = df3.dropna(subset=['TGL BAYAR']).copy()
-
-        if not df_valid_dates.empty:
-            # Konversi ke datetime
-            df_valid_dates['TGL BAYAR'] = pd.to_datetime(df_valid_dates['TGL BAYAR'], errors='coerce')
-
-            # Ambil tanggal saja
-            df_valid_dates['Tanggal'] = df_valid_dates['TGL BAYAR'].dt.date
-
-            # Hitung jumlah transaksi unik per hari
-            transaksi_per_hari = (
-                df_valid_dates.groupby('Tanggal')['No'].nunique().reset_index()
-            )
-            transaksi_per_hari = transaksi_per_hari.rename(columns={'No': 'jumlah_transaksi'})
-            transaksi_per_hari['Tanggal'] = pd.to_datetime(transaksi_per_hari['Tanggal'])
-            transaksi_per_hari = transaksi_per_hari.sort_values(by='Tanggal')
-
-            # === Visualisasi Tren Historis ===
-            st.subheader('Tren Harian Total Transaksi SPKLU (Data Historis)')
-            fig, ax = plt.subplots(figsize=(15, 6))
-            sns.lineplot(x='Tanggal', y='jumlah_transaksi', data=transaksi_per_hari, ax=ax)
-            ax.set_title('Tren Harian Total Transaksi SPKLU')
-            ax.set_xlabel('Tanggal Pembayaran')
-            ax.set_ylabel('Jumlah Transaksi')
-            plt.xticks(rotation=45)
-            plt.tight_layout()
-            st.pyplot(fig)
-            plt.close(fig)
-
-            # === Prediksi ARIMA ===
-            st.subheader('Prediksi Jumlah Transaksi Harian')
-
-            if len(transaksi_per_hari) >= 2:
-                time_series_data = transaksi_per_hari.set_index('Tanggal')['jumlah_transaksi']
-
-                # Parameter ARIMA (default)
-                p, d, q = 5, 1, 0
-                days_to_predict = st.slider('Pilih jumlah hari ke depan untuk diprediksi', 1, 30, 7)
-
-                try:
-                    model = ARIMA(time_series_data, order=(p, d, q))
-                    model_fit = model.fit()
-
-                    last_date = time_series_data.index[-1]
-                    forecast_index = pd.date_range(
-                        start=last_date + pd.Timedelta(days=1),
-                        periods=days_to_predict,
-                        freq='D'
-                    )
-                    forecast = model_fit.predict(
-                        start=len(time_series_data),
-                        end=len(time_series_data) + days_to_predict - 1
-                    )
-                    forecast.index = forecast_index
-
-                    st.write(f"Prediksi Jumlah Transaksi untuk {days_to_predict} Hari ke Depan:")
-                    st.dataframe(
-                        forecast.reset_index().rename(
-                            columns={'index': 'Tanggal', 'predicted_mean': 'Jumlah Prediksi'}
-                        ),
-                        hide_index=True  # ini untuk sembunyikan index
-                    )
-
-                    fig, ax = plt.subplots(figsize=(15, 6))
-                    ax.plot(time_series_data.index, time_series_data.values, label='Data Historis')
-                    ax.plot(forecast.index, forecast.values, label='Prediksi', color='red')
-                    ax.set_title(f'Tren Harian Total Transaksi SPKLU dengan Prediksi ({days_to_predict} Hari ke Depan)')
-                    ax.set_xlabel('Tanggal')
-                    ax.set_ylabel('Jumlah Transaksi')
-                    plt.xticks(rotation=45)
-                    ax.legend()
-                    plt.tight_layout()
-                    st.pyplot(fig)
-                    plt.close(fig)
-
-                except Exception as e:
-                    st.error(f"Terjadi kesalahan saat fitting atau forecasting model ARIMA: {e}")
-                    st.warning("Kemungkinan data tidak cocok untuk order ARIMA ini atau jumlah data terlalu sedikit.")
-
-            else:
-                st.warning("Data transaksi harian yang valid tidak cukup untuk melakukan prediksi (dibutuhkan minimal 2 data point).")
-
-        else:
-            st.warning("Tidak ada data tanggal pembayaran yang valid untuk analisis tren.")
-    else:
+    # Pastikan kolom tanggal ada
+    if "TGL BAYAR" not in df5.columns:
         st.error("Kolom 'TGL BAYAR' tidak ditemukan pada dataset.")
+        st.stop()
+
+    # Bersihkan tanggal
+    df5 = df5.dropna(subset=["TGL BAYAR"]).copy()
+    df5["TGL BAYAR"] = pd.to_datetime(df5["TGL BAYAR"], errors="coerce")
+    df5 = df5.dropna(subset=["TGL BAYAR"])
+    df5["Tanggal"] = df5["TGL BAYAR"].dt.normalize()
+
+    # Hitung jumlah transaksi unik per hari
+    if "No" in df5.columns:
+        daily = df5.groupby("Tanggal")["No"].nunique().rename("y").reset_index()
+    else:
+        st.error("Kolom 'No' tidak tersedia untuk menghitung transaksi unik.")
+        st.stop()
+
+    if len(daily) < 14:
+        st.warning("Data harian terlalu sedikit (butuh minimal 14 hari).")
+        st.stop()
+
+    # Tabs harian & bulanan
+    sub1, sub2 = st.tabs(["Harian (XGBoost)", "Bulanan (XGBoost / Prophet)"])
+
+    # ======================
+    # HARlAN (XGBoost)
+    # ======================
+    with sub1:
+        from xgboost import XGBRegressor
+        st.subheader("Prediksi Harian (XGBoost)")
+        s = daily.set_index("Tanggal")["y"].asfreq("D").fillna(0)
+
+        # visualisasi historis
+        fig, ax = plt.subplots(figsize=(15, 4))
+        ax.plot(s.index, s.values, marker="o")
+        ax.set_title("Tren Harian — Jumlah Transaksi")
+        plt.xticks(rotation=45); plt.tight_layout()
+        st.pyplot(fig)
+
+        # fitur waktu + lag
+        df_feat = s.to_frame().reset_index().rename(columns={"Tanggal": "ds", "y": "y"})
+        df_feat["dayofweek"] = df_feat["ds"].dt.dayofweek
+        df_feat["month"] = df_feat["ds"].dt.month
+        for L in [1, 2, 3, 7]:
+            df_feat[f"lag{L}"] = df_feat["y"].shift(L)
+        df_feat = df_feat.dropna().reset_index(drop=True)
+
+        FEATURES = ["dayofweek", "month", "lag1", "lag2", "lag3", "lag7"]
+
+        model = XGBRegressor(
+            n_estimators=500, learning_rate=0.05, max_depth=6,
+            random_state=42, n_jobs=0
+        )
+        model.fit(df_feat[FEATURES], df_feat["y"])
+
+        horizon = st.slider("Horizon prediksi (hari)", 1, 30, 7)
+        last_ds = df_feat["ds"].iloc[-1]
+        series = df_feat.set_index("ds")["y"].copy()
+        preds = []
+        for h in range(1, horizon + 1):
+            nxt = last_ds + pd.Timedelta(days=h)
+            row = {
+                "dayofweek": nxt.dayofweek,
+                "month": nxt.month,
+                "lag1": series.iloc[-1],
+                "lag2": series.iloc[-2] if len(series) >= 2 else series.iloc[-1],
+                "lag3": series.iloc[-3] if len(series) >= 3 else series.iloc[-1],
+                "lag7": series.iloc[-7] if len(series) >= 7 else series.iloc[-1],
+            }
+            yhat = float(model.predict(pd.DataFrame([row])[FEATURES])[0])
+            preds.append((nxt, max(0, yhat)))
+            series.loc[nxt] = yhat
+
+        df_pred = pd.DataFrame(preds, columns=["Tanggal", "Prediksi"])
+        st.dataframe(df_pred, hide_index=True)
+
+        fig, ax = plt.subplots(figsize=(15, 5))
+        ax.plot(s.index, s.values, label="Historis")
+        ax.plot(df_pred["Tanggal"], df_pred["Prediksi"], "--o", label="Forecast")
+        ax.legend(); plt.xticks(rotation=45); plt.tight_layout()
+        st.pyplot(fig)
+
+    # ======================
+    # BULANAN (XGBoost / Prophet)
+    # ======================
+    with sub2:
+        st.subheader("Prediksi Bulanan")
+        df5["Periode"] = df5["TGL BAYAR"].dt.to_period("M").dt.to_timestamp(how="start")
+
+        monthly = df5.groupby("Periode")["No"].nunique().rename("y").reset_index()
+
+        if len(monthly) < 6:
+            st.warning("Data bulanan terlalu sedikit (butuh ≥ 6 titik).")
+            st.stop()
+
+        fig, ax = plt.subplots(figsize=(12, 4))
+        ax.plot(monthly["Periode"], monthly["y"], "o-")
+        ax.set_title("Tren Bulanan — Jumlah Transaksi")
+        plt.xticks(rotation=45); plt.tight_layout()
+        st.pyplot(fig)
+
+        model_choice = st.radio("Pilih model:", ["XGBoost", "Prophet"], index=0, horizontal=True)
+        horizon_m = st.slider("Horizon (bulan ke depan)", 1, 24, 6)
+
+        if model_choice == "XGBoost":
+            dfm = monthly.rename(columns={"Periode": "ds", "y": "y"})
+            dfm["month"] = dfm["ds"].dt.month
+            dfm["year"] = dfm["ds"].dt.year
+            for L in [1, 2, 3, 6, 12]:
+                dfm[f"lag{L}"] = dfm["y"].shift(L)
+            dfm = dfm.dropna().reset_index(drop=True)
+
+            FEATURES_M = ["month", "year", "lag1", "lag2", "lag3", "lag6", "lag12"]
+            model_m = XGBRegressor(
+                n_estimators=800, learning_rate=0.05, max_depth=6,
+                random_state=42, n_jobs=0
+            )
+            model_m.fit(dfm[FEATURES_M], dfm["y"])
+
+            last_ds = dfm["ds"].iloc[-1]
+            cur = dfm.set_index("ds")["y"].copy()
+            preds_m = []
+            for h in range(1, horizon_m + 1):
+                nxt = (last_ds + pd.offsets.MonthBegin(h))
+                row = {
+                    "month": nxt.month, "year": nxt.year,
+                    "lag1": cur.iloc[-1],
+                    "lag2": cur.iloc[-2] if len(cur) >= 2 else cur.iloc[-1],
+                    "lag3": cur.iloc[-3] if len(cur) >= 3 else cur.iloc[-1],
+                    "lag6": cur.iloc[-6] if len(cur) >= 6 else cur.iloc[-1],
+                    "lag12": cur.iloc[-12] if len(cur) >= 12 else cur.iloc[-1],
+                }
+                yhat = float(model_m.predict(pd.DataFrame([row])[FEATURES_M])[0])
+                preds_m.append((nxt, max(0, yhat)))
+                cur.loc[nxt] = yhat
+
+            df_pred_m = pd.DataFrame(preds_m, columns=["Periode", "Forecast"])
+            st.dataframe(df_pred_m, hide_index=True)
+
+            fig, ax = plt.subplots(figsize=(12, 5))
+            ax.plot(monthly["Periode"], monthly["y"], label="Historis")
+            ax.plot(df_pred_m["Periode"], df_pred_m["Forecast"], "--o", label="Forecast (XGB)")
+            ax.legend(); plt.xticks(rotation=45); plt.tight_layout()
+            st.pyplot(fig)
+
+        else:  # Prophet
+            df_p = monthly.rename(columns={"Periode": "ds", "y": "y"})
+            m = Prophet(yearly_seasonality=True, weekly_seasonality=False, daily_seasonality=False)
+            m.fit(df_p)
+            future = m.make_future_dataframe(periods=horizon_m, freq="MS")
+            fcst = m.predict(future)
+            st.dataframe(fcst[["ds", "yhat", "yhat_lower", "yhat_upper"]].tail(horizon_m), hide_index=True)
+            fig = m.plot(fcst); st.pyplot(fig)
 
 
 elif selected == "Tentang":
