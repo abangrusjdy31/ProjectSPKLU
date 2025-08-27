@@ -196,11 +196,11 @@ if selected == "Menu Utama":
 
     tab1, tab2, tab3 = st.tabs(["Total KWH Terjual", "Total Pendapatan", "Jumlah Transaksi"])
     with tab2:
-        plot_top5(filtered_df, "Total Pendapatan", "5 SPKLU dengan Pendapatan Tertinggi", "#FA8072")
+        plot_top5(filtered_df, "Total Pendapatan", "Top 5 SPKLU Bedasarkan Total Pendapatan", "#FA8072")
     with tab1:
-        plot_top5(filtered_df, "Jumlah KWH", "5 SPKLU dengan KWH Terjual Terbanyak", "lightgreen")
+        plot_top5(filtered_df, "Jumlah KWH", "Top 5 SPKLU Bedasarkan Jumlah KWH Terjual", "lightgreen")
     with tab3:
-        plot_top5(filtered_df, "Jumlah Transaksi", "5 SPKLU dengan Transaksi Terbanyak", "#FFBD31")
+        plot_top5(filtered_df, "Jumlah Transaksi", "Top 5 SPKLU Bedasarkan Jumlah Transaksi Terbanyak", "#FFBD31")
 
 
 
