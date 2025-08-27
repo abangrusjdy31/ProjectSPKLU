@@ -1452,7 +1452,7 @@ elif selected == "Tentang":
         - Dibangun menggunakan metode analisis data prediktif.
         """)
     with st.expander("Meet The Team Behind This Project"):
-        st.image("images/team_photo.jpg", width=400, caption="Tim Pengembang Dashboard SPKLU")  # contoh path foto tim
+        st.image("creator.jpg", width=400, caption="Tim Pengembang Dashboard SPKLU")  # contoh path foto tim
         st.write("""
         Proyek ini dikerjakan oleh *sekelompok peneliti dan developer* yang memiliki latar belakang di bidang:  
         - Energi & Infrastruktur  
