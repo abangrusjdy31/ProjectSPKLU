@@ -323,7 +323,7 @@ elif selected == "Analisis":
     df4 = pd.read_csv(url_data4)
     df4.columns = df4.columns.str.strip()
 
-    tab1, tab2, tab3, tab4, tab5, tab6, tab7, tab8 = st.tabs([
+    tab1, tab2, tab3, tab4, tab5, tab6, tab7 = st.tabs([
         "Ranking SPKLU", 
         "Compare SPKLU", 
         "Compare ULP", 
