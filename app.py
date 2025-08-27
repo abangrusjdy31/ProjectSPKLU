@@ -185,8 +185,8 @@ if selected == "Menu Utama":
                 color="black"
             )
 
-    st.pyplot(fig)
-    plt.close(fig)
+        st.pyplot(fig)
+        plt.close(fig)
 
 
     tab1, tab2, tab3 = st.tabs(["Total KWH Terjual", "Total Pendapatan", "Jumlah Transaksi"])
