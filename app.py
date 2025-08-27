@@ -1125,8 +1125,29 @@ elif selected == "Prediksi":
     df5 = df5.dropna(subset=["TGL BAYAR"])
     df5["Tanggal"] = df5["TGL BAYAR"].dt.normalize()
 
+    # Styling global biar konsisten
+    plt.style.use("default")  # reset
+    plt.rcParams["axes.facecolor"] = "#f9f9f9"     # background area grafik
+    plt.rcParams["figure.facecolor"] = "none"      # transparan, ikut theme streamlit
+    plt.rcParams["axes.edgecolor"] = "#888888"     # warna border
+    plt.rcParams["axes.labelcolor"] = "#444444"    # warna label
+    plt.rcParams["xtick.color"] = "#444444"
+    plt.rcParams["ytick.color"] = "#444444"
+    plt.rcParams["grid.color"] = "#cccccc"
+    
+    # Contoh plot historis vs forecast
+    fig, ax = plt.subplots(figsize=(15, 5))
+    ax.plot(s.index, s.values, color="#e63946", marker="o", label="Historis")  # merah
+    ax.plot(df_pred["Tanggal"], df_pred["Prediksi"], "--o", color="#457b9d", label="Forecast")  # biru keabu
+    ax.set_title("Prediksi Harian", color="#222222", fontsize=14)
+    ax.legend()
+    ax.grid(True, linestyle="--", alpha=0.6)
+    plt.xticks(rotation=45)
+    plt.tight_layout()
+    st.pyplot(fig)
+
     # Tabs Harian & Bulanan
-    tab1, tab2 = st.tabs(["📅 Harian", "📆 Bulanan"])
+    tab1, tab2 = st.tabs(["Harian", "Bulanan"])
 
     # ========================
     # TAB 1: Prediksi Harian
