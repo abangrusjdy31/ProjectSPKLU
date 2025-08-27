@@ -13,6 +13,8 @@ from folium.plugins import MarkerCluster
 from streamlit_folium import folium_static
 from streamlit_option_menu import option_menu
 from statsmodels.tsa.arima.model import ARIMA
+from xgboost import XGBRegressor
+
 
 
 
