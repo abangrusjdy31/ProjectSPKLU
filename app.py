@@ -1159,7 +1159,7 @@ elif selected == "Prediksi":
         st.pyplot(fig)
 
         # Pilihan horizon
-        horizon = st.slider("🔢 Horizon prediksi (hari)", 1, 30, 7)
+        horizon = st.slider("Pilih Prediksi Harian", 1, 30, 7)
 
         # Fitur untuk prediksi
         df_feat = s.to_frame().reset_index().rename(columns={"Tanggal": "ds", "y": "y"})
@@ -1221,7 +1221,7 @@ elif selected == "Prediksi":
         st.pyplot(fig)
 
         # Pilihan horizon
-        horizon_m = st.slider("🔢 Horizon (bulan ke depan)", 1, 24, 6)
+        horizon_m = st.slider("Pilih Prediksi Bulan Kedepan", 1, 24, 6)
 
         # Siapkan fitur bulanan
         dfm = monthly.rename(columns={"Periode": "ds", "y": "y"})
