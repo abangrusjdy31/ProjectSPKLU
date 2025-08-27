@@ -373,11 +373,13 @@ elif selected == "Analisis":
             st.pyplot(fig)
 
 
-        # Tampilkan grafik berdasarkan pilihan
-        st.write("Jumlah Transaksi Terbanyak")
-        plot_ranking(df2, "Jumlah Transaksi", "SPKLU", "#FFBD31", pilihan_ranking)        
+        # Tampilkan grafik berdasarkan pilihan        
+        plot_ranking(df2, "Jumlah Transaksi", "SPKLU", "#FFBD31", pilihan_ranking) 
+        st.divider()  # garis pemisah
         plot_ranking(df2, "Jumlah KWH", "SPKLU", "lightgreen", pilihan_ranking)
+        st.divider()  # garis pemisah
         plot_ranking(df2, "Total Pendapatan", "SPKLU", "#FA8072", pilihan_ranking)
+        st.divider()  # garis pemisah
         
 
 
