@@ -330,8 +330,7 @@ elif selected == "Analisis":
         "Kapasitas & Kategori",
         "Level Spklu",
         "Tren Bulanan Unit SPKLU",
-        "Test3",
-        "Test4"
+        "Ulik SPKLU Lebih Dalam"    
     ])
 
     # ============================
@@ -547,126 +546,156 @@ elif selected == "Analisis":
 
 
 
-    # ============================
-    # Tab 3 - Perbandingan ULP
-    # ============================
     with tab3:
-        st.subheader("Perbandingan Antar ULP di Kota Bandung")
+    st.subheader("Perbandingan Antar ULP di Kota Bandung")
 
-        # --- Merge Data2 dan Data4 berdasarkan Nama SPKLU ---
-        df_wilayah = df2.merge(df4, on="Nama SPKLU", how="left")
+    # --- Merge Data2 dan Data4 berdasarkan Nama SPKLU ---
+    df_wilayah = df2.merge(df4, on="Nama SPKLU", how="left")
 
-        # Urutan bulan
-        bulan_urut = {
-            "Januari": 1, "Februari": 2, "Maret": 3, "April": 4,
-            "Mei": 5, "Juni": 6, "Juli": 7, "Agustus": 8,
-            "September": 9, "Oktober": 10, "November": 11, "Desember": 12
-        }
+    # Urutan bulan
+    bulan_urut = {
+        "Januari": 1, "Februari": 2, "Maret": 3, "April": 4,
+        "Mei": 5, "Juni": 6, "Juli": 7, "Agustus": 8,
+        "September": 9, "Oktober": 10, "November": 11, "Desember": 12
+    }
 
-        # Pisahkan Bulan & Tahun
-        df_wilayah["Bulan"] = df_wilayah["Bulan & Tahun"].str.split(" ").str[0]
-        df_wilayah["Tahun"] = df_wilayah["Bulan & Tahun"].str.split(" ").str[1].astype(int)
-        df_wilayah["key"] = df_wilayah["Tahun"] * 12 + df_wilayah["Bulan"].map(bulan_urut)
+    # Pisahkan Bulan & Tahun
+    df_wilayah["Bulan"] = df_wilayah["Bulan & Tahun"].str.split(" ").str[0]
+    df_wilayah["Tahun"] = df_wilayah["Bulan & Tahun"].str.split(" ").str[1].astype(int)
+    df_wilayah["key"] = df_wilayah["Tahun"] * 12 + df_wilayah["Bulan"].map(bulan_urut)
 
-        # Dropdown rentang bulan
-        opsi_bulan_tahun = (
-            df_wilayah.sort_values("key")[["Bulan", "Tahun"]]
-            .drop_duplicates()
-            .assign(label=lambda x: x["Bulan"] + " " + x["Tahun"].astype(str))
-            ["label"].tolist()
+    # Dropdown rentang bulan
+    opsi_bulan_tahun = (
+        df_wilayah.sort_values("key")[["Bulan", "Tahun"]]
+        .drop_duplicates()
+        .assign(label=lambda x: x["Bulan"] + " " + x["Tahun"].astype(str))
+        ["label"].tolist()
+    )
+
+    col1, col2 = st.columns(2)
+    start_option = col1.selectbox("Dari Bulan", opsi_bulan_tahun, index=0, key="wil_start")
+    end_option = col2.selectbox("Sampai Bulan", opsi_bulan_tahun, index=len(opsi_bulan_tahun)-1, key="wil_end")
+
+    # Ambil key dari label yang dipilih
+    key_map = (
+        df_wilayah.assign(label=lambda x: x["Bulan"] + " " + x["Tahun"].astype(str))
+        .drop_duplicates(subset=["label"])
+        .set_index("label")["key"]
+        .to_dict()
+    )
+    key_start = key_map[start_option]
+    key_end = key_map[end_option]
+
+    if key_start <= key_end:
+        df_bulan = df_wilayah[(df_wilayah["key"] >= key_start) & (df_wilayah["key"] <= key_end)]
+    else:
+        st.warning("Bulan awal harus <= bulan akhir!")
+        df_bulan = df_wilayah.copy()
+
+    # Dropdown pilih wilayah (ULP)
+    wilayah_list = df_bulan["Wilayah"].dropna().unique()
+    col1, col2 = st.columns(2)
+    wilayah_a = col1.selectbox("Pilih Wilayah A", wilayah_list, index=0, key="wilayah_a")
+    wilayah_b = col2.selectbox(
+        "Pilih Wilayah B",
+        wilayah_list,
+        index=min(1, len(wilayah_list)-1) if len(wilayah_list) > 1 else 0,
+        key="wilayah_b"
+    )
+
+    # Filter data per wilayah
+    data_a = df_bulan[df_bulan["Wilayah"] == wilayah_a]
+    data_b = df_bulan[df_bulan["Wilayah"] == wilayah_b]
+
+    # Ringkasan
+    summary_a = {
+        "Jumlah Transaksi": int(data_a["Jumlah Transaksi"].sum()),
+        "Total kWh": float(data_a["Jumlah KWH"].sum()),
+        "Pendapatan": float(data_a["Total Pendapatan"].sum())
+    }
+    summary_b = {
+        "Jumlah Transaksi": int(data_b["Jumlah Transaksi"].sum()),
+        "Total kWh": float(data_b["Jumlah KWH"].sum()),
+        "Pendapatan": float(data_b["Total Pendapatan"].sum())
+    }
+
+    # Warna konsisten (tabel & donut)
+    warna_map = {
+        wilayah_a: px.colors.qualitative.Set2[0],
+        wilayah_b: px.colors.qualitative.Set2[1]
+    }
+
+    # ===== Tabel ringkasan dengan index berwarna =====
+    df_summary = pd.DataFrame([summary_a, summary_b], index=[wilayah_a, wilayah_b])
+
+    def color_index(idxs):
+        # idxs adalah Index/Series -> kembalikan list style dgn panjang yg sama
+        return [f"color: {warna_map.get(v, 'black')}; font-weight: bold" for v in idxs]
+
+    styled_df = (
+        df_summary.style
+        .set_table_styles(
+            [
+                {"selector": "th.col_heading", "props": [("background-color", "#f5f5f5"), ("padding", "4px")]},
+                {"selector": "th.row_heading", "props": [("text-align", "left"), ("padding", "4px")]},
+                {"selector": "td", "props": [("padding", "4px")]}  # jarak lebih rapat
+            ]
         )
+        .apply_index(color_index, axis=0)
+        .format("{:,.0f}")
+    )
 
-        col1, col2 = st.columns(2)
-        start_option = col1.selectbox("Dari Bulan", opsi_bulan_tahun, index=0, key="wil_start")
-        end_option = col2.selectbox("Sampai Bulan", opsi_bulan_tahun, index=len(opsi_bulan_tahun)-1, key="wil_end")
+    st.subheader("Ringkasan Perbandingan ULP di Kota Bandung")
+    st.dataframe(styled_df, use_container_width=True)
 
-        key_start = df_wilayah.loc[df_wilayah["Bulan & Tahun"] == start_option, "key"].iloc[0]
-        key_end = df_wilayah.loc[df_wilayah["Bulan & Tahun"] == end_option, "key"].iloc[0]
+    # ===== Donut chart (warna mengikuti tabel) =====
+    fig = make_subplots(rows=1, cols=3, specs=[[{'type':'domain'}, {'type':'domain'}, {'type':'domain'}]])
 
-        if key_start <= key_end:
-            df_bulan = df_wilayah[(df_wilayah["key"] >= key_start) & (df_wilayah["key"] <= key_end)]
-        else:
-            st.warning("Bulan awal harus <= bulan akhir!")
-            df_bulan = df_wilayah.copy()
+    cols = [warna_map[wilayah_a], warna_map[wilayah_b]]
 
-        # Dropdown pilih wilayah (ULP)
-        wilayah_list = df_bulan["Wilayah"].dropna().unique()
-        col1, col2 = st.columns(2)
-        wilayah_a = col1.selectbox("Pilih Wilayah A", wilayah_list, index=0, key="wilayah_a")
-        wilayah_b = col2.selectbox(
-            "Pilih Wilayah B",
-            wilayah_list,
-            index=min(1, len(wilayah_list)-1) if len(wilayah_list) > 1 else 0,
-            key="wilayah_b"
-        )
+    fig.add_trace(go.Pie(
+        labels=[wilayah_a, wilayah_b],
+        values=[summary_a["Jumlah Transaksi"], summary_b["Jumlah Transaksi"]],
+        hole=0.6,
+        marker=dict(colors=cols),
+        textinfo='percent',
+        showlegend=True
+    ), 1, 1)
 
-        # Filter data per wilayah
-        data_a = df_bulan[df_bulan["Wilayah"] == wilayah_a]
-        data_b = df_bulan[df_bulan["Wilayah"] == wilayah_b]
+    fig.add_trace(go.Pie(
+        labels=[wilayah_a, wilayah_b],
+        values=[summary_a["Total kWh"], summary_b["Total kWh"]],
+        hole=0.6,
+        marker=dict(colors=cols),
+        textinfo='percent',
+        showlegend=False
+    ), 1, 2)
 
-        # Ringkasan
-        summary_a = {
-            "Jumlah Transaksi": int(data_a["Jumlah Transaksi"].sum()),
-            "Total kWh": float(data_a["Jumlah KWH"].sum()),
-            "Pendapatan": float(data_a["Total Pendapatan"].sum())
-        }
-        summary_b = {
-            "Jumlah Transaksi": int(data_b["Jumlah Transaksi"].sum()),
-            "Total kWh": float(data_b["Jumlah KWH"].sum()),
-            "Pendapatan": float(data_b["Total Pendapatan"].sum())
-        }
+    fig.add_trace(go.Pie(
+        labels=[wilayah_a, wilayah_b],
+        values=[summary_a["Pendapatan"], summary_b["Pendapatan"]],
+        hole=0.6,
+        marker=dict(colors=cols),
+        textinfo='percent',
+        showlegend=False
+    ), 1, 3)
 
-        # Buat mapping warna sesuai wilayah
-        warna_map = {
-            wilayah_a: px.colors.qualitative.Set2[0],
-            wilayah_b: px.colors.qualitative.Set2[1]
-        }
+    fig.update_layout(
+        annotations=[
+            dict(text="Transaksi", x=0.11, y=0.52, font_size=14, showarrow=False),
+            dict(text="Total kWh", x=0.50, y=0.52, font_size=14, showarrow=False),
+            dict(text="Pendapatan", x=0.90, y=0.52, font_size=14, showarrow=False)
+        ],
+        # Legend & margin dipadatkan (jarak diperkecil)
+        legend=dict(orientation="h", yanchor="top", y=-0.05, xanchor="center", x=0.5),
+        margin=dict(t=20, b=10, l=10, r=10),
+        height=360,
+        paper_bgcolor="rgba(0,0,0,0)",
+        plot_bgcolor="rgba(0,0,0,0)",
+        uniformtext_minsize=12, uniformtext_mode="hide"
+    )
 
-        # Tabel ringkasan dengan warna index
-        df_summary = pd.DataFrame([summary_a, summary_b], index=[wilayah_a, wilayah_b])
-
-        def color_index(val):
-            color = warna_map.get(val, "black")
-            return f"color: {color}; font-weight:bold"
-    
-        styled_df = (
-            df_summary.style
-            .set_table_styles(
-                [
-                    {"selector": "th.row_heading", "props": [("text-align", "left"), ("padding", "4px")]},
-                    {"selector": "th.col_heading", "props": [("background-color", "#f5f5f5"), ("padding", "4px")]},
-                    {"selector": "td", "props": [("padding", "4px")]}
-                ]
-            )
-            .apply_index(color_index, axis=0)
-            .format("{:,.0f}")
-        )
-
-        st.subheader("Ringkasan Perbandingan ULP di Kota Bandung")
-        st.dataframe(styled_df, use_container_width=True)
-    
-        # Donut chart (mirip perbandingan SPKLU)
-        fig = make_subplots(rows=1, cols=3, specs=[[{'type':'domain'}, {'type':'domain'}, {'type':'domain'}]])
-    
-        fig.add_trace(go.Pie(labels=[wilayah_a, wilayah_b], values=[summary_a["Jumlah Transaksi"], summary_b["Jumlah Transaksi"]],
-                            hole=0.6, marker=dict(colors=[warna_map[wilayah_a], warna_map[wilayah_b]]), textinfo='percent', showlegend=True), 1, 1)
-    
-        fig.add_trace(go.Pie(labels=[wilayah_a, wilayah_b], values=[summary_a["Total kWh"], summary_b["Total kWh"]],
-                            hole=0.6, marker=dict(colors=[warna_map[wilayah_a], warna_map[wilayah_b]]), textinfo='percent', showlegend=False), 1, 2)
-    
-        fig.add_trace(go.Pie(labels=[wilayah_a, wilayah_b], values=[summary_a["Pendapatan"], summary_b["Pendapatan"]],
-                            hole=0.6, marker=dict(colors=[warna_map[wilayah_a], warna_map[wilayah_b]]), textinfo='percent', showlegend=False), 1, 3)
-    
-        fig.update_layout(
-            annotations=[
-                dict(text="Transaksi", x=0.11, y=0.5, font_size=14, showarrow=False),
-                dict(text="Total kWh", x=0.50, y=0.5, font_size=14, showarrow=False),
-                dict(text="Pendapatan", x=0.90, y=0.5, font_size=14, showarrow=False)
-            ],
-            legend=dict(orientation="h", yanchor="top", y=-0.2, xanchor="center", x=0.5),
-        )
-    
-        st.plotly_chart(fig, use_container_width=True)
+    st.plotly_chart(fig, use_container_width=True)
 
     # ============================
     # Tab 4 - Kapasitas & Kategori
