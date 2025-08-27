@@ -120,7 +120,7 @@ if selected == "Menu Utama":
             <style>
             .metric-container {display: flex; justify-content: space-between; gap: 10px;}
             .metric-box {flex: 1; border: 2px solid #e6e6e6; border-radius: 10px;
-                         padding: 20px; text-align: center; background-color: #f9f9f9;
+                         padding: 20px; text-align: center; background-color: #FFFFFF;
                          box-shadow: 2px 2px 8px rgba(0,0,0,0.05);}
             .metric-box.wide {flex: 1.5;}
             .metric-label {font-weight: bold; font-size: 18px; margin-bottom: 8px;}
