@@ -10,3 +10,4 @@ numpy
 folium
 streamlit-folium
 scikit-learn
+xgboost
