@@ -52,7 +52,7 @@ with st.sidebar:
         styles={
             "container": {
                 "padding": "5!important",
-                "background-color": "#D6EBFF",
+                "background-color": "#D8F9FF",
             },
             "icon": {
                 "color": "#007ACC",
