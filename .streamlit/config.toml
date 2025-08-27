@@ -1,7 +1,7 @@
 [theme]
 base="light"
 primaryColor="#FF7F00"             # warna aksen tombol (opsional)
-backgroundColor="#FFFFFF"          # background putih
+backgroundColor="#ADD8E6"          # background putih
 secondaryBackgroundColor="#F0F0F0" # sidebar abu-abu terang
 textColor="#000000"                # teks hitam
 font="sans serif"
