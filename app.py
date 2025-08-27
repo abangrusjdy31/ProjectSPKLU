@@ -454,7 +454,7 @@ elif selected == "Analisis":
           df_summary.style
           .set_table_styles(
               [
-                  {"selector": "th", "props": [("background-color", "#D9F9FF"), ("color", "black"), ("font-weight", "bold")]},
+                  {"selector": "th", "props": [("background-color", "#FFFFFF"), ("color", "black"), ("font-weight", "bold")]},
                   {"selector": "td", "props": [("padding", "8px")]},
               ]
           )
