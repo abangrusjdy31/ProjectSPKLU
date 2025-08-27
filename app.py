@@ -1101,7 +1101,7 @@ elif selected == "Analisis":
 # ======================
 # PREDIKSI
 # ======================
-elif selected == "Prediksi":
+elif selected == "Prediksi": 
     st.title("Prediksi Jumlah Transaksi SPKLU")
     st.write("Prediksi menggunakan model Machine Learning (XGBoost) dan Prophet (opsional).")
 
@@ -1109,13 +1109,11 @@ elif selected == "Prediksi":
     model_daily = joblib.load("model_daily.pkl")
     model_monthly = joblib.load("model_monthly.pkl")
     
-   
     # ==== Load Dataset ====
     url_data5 = "https://docs.google.com/spreadsheets/d/16cyvXwvucVb7EM1qiikZpbK8J8isbktuiw-MR1EJDEY/export?format=csv&gid=2075790964"
     df5 = pd.read_csv(url_data5)
     df5.columns = df5.columns.str.strip()
 
-    # Pastikan kolom tanggal ada
     if "TGL BAYAR" not in df5.columns:
         st.error("Kolom 'TGL BAYAR' tidak ditemukan pada dataset.")
         st.stop()
@@ -1125,27 +1123,16 @@ elif selected == "Prediksi":
     df5 = df5.dropna(subset=["TGL BAYAR"])
     df5["Tanggal"] = df5["TGL BAYAR"].dt.normalize()
 
-    # Styling global biar konsisten
-    plt.style.use("default")  # reset
-    plt.rcParams["axes.facecolor"] = "#f9f9f9"     # background area grafik
-    plt.rcParams["figure.facecolor"] = "none"      # transparan, ikut theme streamlit
-    plt.rcParams["axes.edgecolor"] = "#888888"     # warna border
-    plt.rcParams["axes.labelcolor"] = "#444444"    # warna label
+    # Styling global
+    plt.style.use("default")
+    plt.rcParams["axes.facecolor"] = "#f9f9f9"
+    plt.rcParams["figure.facecolor"] = "none"
+    plt.rcParams["axes.edgecolor"] = "#888888"
+    plt.rcParams["axes.labelcolor"] = "#444444"
     plt.rcParams["xtick.color"] = "#444444"
     plt.rcParams["ytick.color"] = "#444444"
     plt.rcParams["grid.color"] = "#cccccc"
     
-    # Contoh plot historis vs forecast
-    fig, ax = plt.subplots(figsize=(15, 5))
-    ax.plot(s.index, s.values, color="#e63946", marker="o", label="Historis")  # merah
-    ax.plot(df_pred["Tanggal"], df_pred["Prediksi"], "--o", color="#457b9d", label="Forecast")  # biru keabu
-    ax.set_title("Prediksi Harian", color="#222222", fontsize=14)
-    ax.legend()
-    ax.grid(True, linestyle="--", alpha=0.6)
-    plt.xticks(rotation=45)
-    plt.tight_layout()
-    st.pyplot(fig)
-
     # Tabs Harian & Bulanan
     tab1, tab2 = st.tabs(["Harian", "Bulanan"])
 
@@ -1164,7 +1151,7 @@ elif selected == "Prediksi":
 
         # Visualisasi historis
         fig, ax = plt.subplots(figsize=(15, 4))
-        ax.plot(s.index, s.values, marker="o", label="Historis")
+        ax.plot(s.index, s.values, marker="o", label="Historis", color="#e63946")
         ax.set_title("Tren Harian — Jumlah Transaksi")
         ax.legend()
         plt.xticks(rotation=45)
@@ -1174,7 +1161,7 @@ elif selected == "Prediksi":
         # Pilihan horizon
         horizon = st.slider("🔢 Horizon prediksi (hari)", 1, 30, 7)
 
-        # Buat fitur untuk prediksi
+        # Fitur untuk prediksi
         df_feat = s.to_frame().reset_index().rename(columns={"Tanggal": "ds", "y": "y"})
         df_feat["dayofweek"] = df_feat["ds"].dt.dayofweek
         df_feat["month"] = df_feat["ds"].dt.month
@@ -1184,7 +1171,7 @@ elif selected == "Prediksi":
 
         FEATURES = ["dayofweek", "month", "lag1", "lag2", "lag3", "lag7"]
 
-        # Mulai dari data terakhir
+        # Prediksi berulang
         last_ds = df_feat["ds"].iloc[-1]
         series = df_feat.set_index("ds")["y"].copy()
         preds = []
@@ -1206,8 +1193,8 @@ elif selected == "Prediksi":
         st.dataframe(df_pred, hide_index=True)
 
         fig, ax = plt.subplots(figsize=(15, 5))
-        ax.plot(s.index, s.values, label="Historis")
-        ax.plot(df_pred["Tanggal"], df_pred["Prediksi"], "--o", label="Forecast")
+        ax.plot(s.index, s.values, label="Historis", color="#e63946")
+        ax.plot(df_pred["Tanggal"], df_pred["Prediksi"], "--o", label="Forecast", color="#457b9d")
         ax.legend()
         plt.xticks(rotation=45)
         plt.tight_layout()
@@ -1226,7 +1213,7 @@ elif selected == "Prediksi":
             st.stop()
 
         fig, ax = plt.subplots(figsize=(12, 4))
-        ax.plot(monthly["Periode"], monthly["y"], "o-", label="Historis")
+        ax.plot(monthly["Periode"], monthly["y"], "o-", label="Historis", color="#e63946")
         ax.set_title("Tren Bulanan — Jumlah Transaksi")
         ax.legend()
         plt.xticks(rotation=45)
@@ -1268,8 +1255,8 @@ elif selected == "Prediksi":
         st.dataframe(df_pred_m, hide_index=True)
 
         fig, ax = plt.subplots(figsize=(12, 5))
-        ax.plot(monthly["Periode"], monthly["y"], label="Historis")
-        ax.plot(df_pred_m["Periode"], df_pred_m["Forecast"], "--o", label="Forecast (XGB)")
+        ax.plot(monthly["Periode"], monthly["y"], label="Historis", color="#e63946")
+        ax.plot(df_pred_m["Periode"], df_pred_m["Forecast"], "--o", label="Forecast (XGB)", color="#457b9d")
         ax.legend()
         plt.xticks(rotation=45)
         plt.tight_layout()
