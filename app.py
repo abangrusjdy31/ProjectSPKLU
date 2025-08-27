@@ -16,11 +16,13 @@ from statsmodels.tsa.arima.model import ARIMA
 
 
 
-# --- Ganti nama app & favicon ---
 st.set_page_config(
-    page_title="Dashboard SPKLU",      # judul di tab browser    
-    layout="wide"                       # biar layout melebar
+    page_title="Dashboard SPKLU",   # tulisan di bar
+    page_icon="logo spklu.png",           # logo custom (bisa file gambar)
+    layout="wide"
 )
+
+st.title("Dashboard SPKLU")
 
     
 # Optional: use wide layout
