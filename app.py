@@ -149,21 +149,45 @@ if selected == "Menu Utama":
     st.subheader("Ranking SPKLU")
 
     def plot_top5(df, kolom, judul, warna):
-        top5 = df.groupby("Nama SPKLU")[kolom].sum().nlargest(5).sort_values()
-        fig, ax = plt.subplots(figsize=(8, 5))
-        bars = ax.barh(top5.index, top5.values, color=warna)
-        ax.set_title(judul, fontsize=14, weight="bold")
-        ax.set_xlabel(kolom, fontsize=12)
-        ax.set_ylabel("SPKLU", fontsize=12)
+    top5 = df.groupby("Nama SPKLU")[kolom].sum().nlargest(5).sort_values()
 
-        # Tambahkan label nilai di ujung bar
-        for bar in bars:
-            ax.text(bar.get_width() + (0.01 * max(top5.values)),
-                    bar.get_y() + bar.get_height()/2,
-                    f"{int(bar.get_width()):,}",
-                    va="center", fontsize=10)
+    fig, ax = plt.subplots(figsize=(8, 5), facecolor="none")  # transparan
+    ax.set_facecolor("none")  # mengikuti background Streamlit
 
-        st.pyplot(fig)
+    # Buat bar horizontal dengan rounded edge
+    bars = ax.barh(
+        top5.index,
+        top5.values,
+        color=warna,
+        edgecolor="black",
+        height=0.6
+    )
+
+    # Percantik style
+    ax.set_title(judul, fontsize=14, weight="bold", pad=15)
+    ax.set_xlabel(kolom, fontsize=12)
+    ax.set_ylabel("")
+    ax.grid(axis="x", linestyle="--", alpha=0.5)
+
+    # Hilangkan spines (garis tepi)
+    for spine in ["top", "right", "left"]:
+        ax.spines[spine].set_visible(False)
+
+    # Tambahkan label nilai di ujung bar
+    for bar in bars:
+        ax.text(
+            bar.get_width() + (0.01 * max(top5.values)),
+            bar.get_y() + bar.get_height()/2,
+            f"{int(bar.get_width()):,}",
+            va="center",
+            fontsize=10,
+            fontweight="bold",
+            color="black"
+        )
+
+    st.pyplot(fig)
+    plt.close(fig)
+
 
     tab1, tab2, tab3 = st.tabs(["Total KWH Terjual", "Total Pendapatan", "Jumlah Transaksi"])
     with tab2:
