@@ -650,14 +650,40 @@ elif selected == "Analisis":
             wilayah_b: px.colors.qualitative.Set2[1]
         }
     
-        # ===== Tampilkan Ringkasan dengan Metric =====
-        ulps = [(wilayah_a, summary_a), (wilayah_b, summary_b)]
-        for ulp_name, summary in ulps:
-            st.markdown(f"<h3 style='text-align: center;'>📊 Ringkasan {ulp_name}</h3>", unsafe_allow_html=True)
-            c1, c2, c3 = st.columns(3)
-            c1.metric("Total Transaksi", f"{summary['Total Transaksi']:,.0f}")
-            c2.metric("Total kWh", f"{summary['Total kWh']:,.0f}")
-            c3.metric("Pendapatan", f"Rp {summary['Pendapatan']:,.0f}")            
+        # ===== Tabel ringkasan dengan index berwarna =====
+        # Buat DataFrame ringkasan
+        df_summary = pd.DataFrame(
+            [summary_a, summary_b],
+            index=[wilayah_a, wilayah_b]
+        )
+        
+        # Fungsi untuk mewarnai index (baris) sesuai ULP
+        def color_index(idxs):
+            """
+            idxs : Index / Series
+            Kembalikan list style dengan panjang sama
+            """
+            return [
+                f"color: {warna_map.get(v, 'black')}; font-weight: bold"
+                for v in idxs
+            ]
+        
+        # Styling DataFrame
+        styled_df = (
+            df_summary.style
+            .set_table_styles([
+                {"selector": "th.col_heading", "props": [("background-color", "#f5f5f5"), ("padding", "4px")]},
+                {"selector": "th.row_heading", "props": [("text-align", "left"), ("padding", "4px")]},
+                {"selector": "td", "props": [("padding", "4px")]}  # jarak lebih rapat
+            ])
+            .apply_index(color_index, axis=0)  # warnai baris sesuai ULP
+            .format("{:,.0f}")  # format angka dengan ribuan
+        )
+        
+        # Tampilkan di Streamlit
+        st.subheader("Ringkasan Perbandingan ULP di Kota Bandung")
+        st.dataframe(styled_df, use_container_width=True)
+                   
     
         # ===== Donut chart (warna mengikuti tabel) =====
         fig = make_subplots(rows=1, cols=3, specs=[[{'type':'domain'}, {'type':'domain'}, {'type':'domain'}]])
