@@ -1117,11 +1117,12 @@ elif selected == "Analisis":
             )
             st.plotly_chart(fig_transaksi, use_container_width=True)
 
+        # Opsional: lihat data
         with st.expander("Lihat Data Tren Bulanan"):
             st.dataframe(
                 df_tren[["Bulan & Tahun", "Jumlah Transaksi", "Jumlah KWH", "Total Pendapatan"]],
                 hide_index=True  # index disembunyikan
-            )
+            )
 
 
 
