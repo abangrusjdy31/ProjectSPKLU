@@ -81,6 +81,29 @@ with st.sidebar:
             }
         }
     )
+    # Tambahkan copyright di bawah sidebar
+    st.markdown(
+        """
+        <style>
+            [data-testid="stSidebar"] > div:first-child {
+                display: flex;
+                flex-direction: column;
+                height: 100%;
+            }
+            .sidebar-footer {
+                margin-top: auto;
+                font-size: 13px;
+                color: gray;
+                text-align: center;
+                padding: 10px 0;
+            }
+        </style>
+        <div class="sidebar-footer">
+            © 2025 PLN Kota Bandung
+        </div>
+        """,
+        unsafe_allow_html=True
+    )
 
 # ==== Load Dataset ====
 url_data2 = "https://docs.google.com/spreadsheets/d/16cyvXwvucVb7EM1qiikZpbK8J8isbktuiw-MR1EJDEY/export?format=csv&gid=829004516"
