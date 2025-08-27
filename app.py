@@ -1383,53 +1383,91 @@ elif selected == "Prediksi":
         st.pyplot(fig)
 
 elif selected == "Tentang":
-    st.title('Tentang Dashboard Ini')
+    st.title('Tentang Dashboard SPKLU')
     st.write("""
-    Dashboard ini dibuat untuk menganalisis data transaksi SPKLU secara interaktif dan informatif.
-
-    ### Apa itu SPKLU?
-    SPKLU (Stasiun Pengisian Kendaraan Listrik Umum) adalah fasilitas yang disediakan untuk mengisi daya baterai kendaraan listrik. SPKLU menjadi bagian penting dalam ekosistem kendaraan listrik di Indonesia untuk mendukung transisi menuju energi bersih dan berkelanjutan.
-
-    ### Fitur dalam Dashboard:
+    Dashboard ini dirancang untuk menganalisis data transaksi SPKLU (Stasiun Pengisian Kendaraan Listrik Umum) 
+    di wilayah Bandung Raya. Fungsinya adalah memberikan wawasan menyeluruh mengenai pendapatan, konsumsi energi (kWh), 
+    jumlah transaksi, hingga tren penggunaan berdasarkan unit SPKLU.
     """)
 
-    # Fitur 1: Data Awal
-    with st.expander("Data Awal"):
-        st.write("Menampilkan cuplikan awal data transaksi SPKLU yang digunakan dalam analisis.")
+    st.subheader("Fitur-Fitur Dashboard")
 
-    # Fitur 2: Ringkasan Data
-    with st.expander("Ringkasan Data"):
-        st.write("Memberikan informasi jumlah total transaksi dalam dataset.")
+    with st.expander("1. Menu Utama"):
+        st.write("""
+        - Menampilkan ringkasan indikator kinerja utama:
+          * *Total KWh Terjual*
+          * *Total Pendapatan*
+          * *Jumlah Transaksi*
+        - Menyediakan *Ranking SPKLU* berdasarkan indikator di atas.
+        """)
 
-    # Fitur 3: Transaksi per Unit
-    with st.expander("Transaksi per Unit"):
-        st.write("Menampilkan jumlah transaksi yang terjadi di setiap unit pelayanan PLN (UNITUP).")
+    with st.expander("2. Analisis"):
+        st.write("Menu analisis terdiri dari beberapa subfitur:")
+        
+        with st.expander("a. Ranking 5 SPKLU"):
+            st.write("""
+            - Menampilkan 5 SPKLU dengan kinerja *terbesar* dan *terkecil*.
+            - Berdasarkan indikator: *KWh, pendapatan, transaksi*.
+            """)
+        
+        with st.expander("Compare SPKLU"):
+            st.write("""
+            - Membandingkan *2 unit SPKLU* secara langsung.
+            - Perbandingan mencakup: *Total Pendapatan, Jumlah KWh, dan Jumlah Transaksi*.
+            """)
+        
+        with st.expander("Compare ULP"):
+            st.write("""
+            - Sama seperti Compare SPKLU, tetapi perbandingan dilakukan di tingkat *Unit Layanan Pelanggan (ULP)*.
+            """)
+        
+        with st.expander("Kapasitas & Kategori"):
+            st.write("""
+            - Menampilkan informasi kapasitas pengisian dan kategori SPKLU.
+            - Kategori: *Standard, Medium, Fast, Ultra Fast*.
+            """)
+        
+        with st.expander("Level SPKLU"):
+            st.write("""
+            - Menyajikan klasifikasi level SPKLU berdasarkan *kecepatan pengisian* dan *jenis layanan*.
+            """)
+        
+        with st.expander("Tren Bulanan Unit SPKLU"):
+            st.write("""
+            - Visualisasi tren bulanan untuk tiap SPKLU.
+            - Menampilkan 3 grafik utama:
+              * *Total Pendapatan*
+              * *Jumlah KWh*
+              * *Jumlah Transaksi*
+            - Bisa dipilih berdasarkan unit SPKLU tertentu.
+            """)
+        with st.expander("Ulik SPKLU Lebih Dalam"):
+            st.write("""
+            - Blom sempat
+            """)
 
-    # Fitur 4: Analisis per Unit
-    with st.expander("Analisis per Unit"):
-        st.write("Menampilkan transaksi per SPKLU pada unit tertentu yang dipilih, lengkap dengan grafik batang (bar chart).")
+    with st.expander("3. Prediksi"):
+        st.write("""
+        - Menyediakan proyeksi jumlah transaksi atau konsumsi energi (KWh).
+        - Dibangun menggunakan metode analisis data prediktif.
+        """)
+    with st.expander("Meet The Team Behind This Project"):
+        st.image("images/team_photo.jpg", width=400, caption="Tim Pengembang Dashboard SPKLU")  # contoh path foto tim
+        st.write("""
+        Proyek ini dikerjakan oleh *sekelompok peneliti dan developer* yang memiliki latar belakang di bidang:  
+        - Energi & Infrastruktur  
+        - Data Science & Machine Learning  
+        - Cloud Computing  
+        - Software Development & UI/UX  
 
-    # Fitur 5: KWH & Pendapatan
-    with st.expander("KWH & Pendapatan"):
-        st.write("Menunjukkan total energi (kWh) yang terjual serta pendapatan yang dihasilkan dari seluruh transaksi.")
+        Tujuan utama proyek ini adalah menghadirkan *dashboard interaktif* yang mampu membantu analisis tren SPKLU 
+        secara lebih sistematis, logis, dan mudah dipahami.  
 
-    # Fitur 6: Ranking Unit
-    with st.expander("Ranking Unit"):
-        st.write("Mengurutkan UNITUP berdasarkan total energi terjual dan pendapatan terbesar.")
-
-    # Fitur 7: Ranking SPKLU
-    with st.expander("Ranking SPKLU"):
-        st.write("Menyediakan daftar SPKLU berdasarkan performa (total kWh terjual dan total pendapatan).")
-
-    # Fitur 8: Proporsi Pie Chart
-    with st.expander("Proporsi Pie Chart"):
-        st.write("Visualisasi pie chart untuk menunjukkan proporsi energi terjual dan pendapatan di masing-masing UNITUP.")
-
-    # Fitur 9: Tren Transaksi & Prediksi
-    with st.expander("Tren Transaksi & Prediksi"):
-        st.write("Menampilkan tren harian jumlah transaksi dalam bentuk grafik garis. Fitur ini juga menggunakan **model ARIMA** untuk memprediksi jumlah transaksi di masa depan berdasarkan pola historis.")
-
+        Terima kasih kepada semua pihak yang sudah berkontribusi dalam proyek ini!
+        """)
+        
     st.write("""
-    ### 📁 Sumber Data:
-    Data berasal dari Penjualan SPKLU di kota Bandung selama Bulan Juni 2024 - Juni 2025
+    ### 📁 Sumber Data
+    Data berasal dari Penjualan SPKLU di kota Bandung selama Bulan Januari 2024 - Sekarang
+    Data dapat diupdate melalui spreadsheet yang sudah disediakan
     """)
