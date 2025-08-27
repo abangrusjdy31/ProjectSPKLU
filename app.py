@@ -334,24 +334,40 @@ elif selected == "Analisis":
         # Pilihan ranking: 5 teratas / 5 terbawah
         pilihan_ranking = st.radio("Pilih Ranking", ["5 Teratas", "5 Terbawah"], horizontal=True)
 
-        def plot_ranking(df, kolom, judul, warna, ranking):
+        def plot_ranking(df, kolom, judul, warna, ranking, bg_color="#D9F9FF"):
             grouped = df.groupby("Nama SPKLU")[kolom].sum()
             if ranking == "5 Teratas":
-                data = grouped.nlargest(5).sort_values(ascending=True)  # biar kecil di bawah, besar di atas
+                data = grouped.nlargest(5).sort_values(ascending=True)  # kecil di bawah, besar di atas
             else:
-                data = grouped.nsmallest(5).sort_values(ascending=False)  # biar kecil di atas, besar di bawah
-
+                data = grouped.nsmallest(5).sort_values(ascending=False)  # kecil di atas, besar di bawah
+        
             fig, ax = plt.subplots(figsize=(8, 5))
+        
+            # Atur warna background agar sesuai background utama
+            fig.patch.set_facecolor(bg_color)
+            ax.set_facecolor(bg_color)
+        
+            # Plot barh
             data.plot(kind="barh", color=warna, ax=ax)
-            ax.set_xlabel(kolom)
+        
+            # Tambahan styling
+            ax.set_xlabel(kolom, fontsize=12, weight="bold")
             ax.set_ylabel("")
+            ax.tick_params(axis="x", labelsize=10)
+            ax.tick_params(axis="y", labelsize=10)
+            ax.grid(axis="x", linestyle="--", alpha=0.5)
+        
+            # Hapus spines biar lebih clean
+            for spine in ["top", "right"]:
+                ax.spines[spine].set_visible(False)
+        
             st.pyplot(fig)
 
 
         # Tampilkan grafik berdasarkan pilihan
-        plot_ranking(df2, "Jumlah Transaksi", "SPKLU", "orange", pilihan_ranking)        
+        plot_ranking(df2, "Jumlah Transaksi", "SPKLU", "#FFBD31", pilihan_ranking)        
         plot_ranking(df2, "Jumlah KWH", "SPKLU", "lightgreen", pilihan_ranking)
-        plot_ranking(df2, "Total Pendapatan", "SPKLU", "skyblue", pilihan_ranking)
+        plot_ranking(df2, "Total Pendapatan", "SPKLU", "#FA8072", pilihan_ranking)
         
 
 
