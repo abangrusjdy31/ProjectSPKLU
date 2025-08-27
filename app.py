@@ -969,8 +969,28 @@ elif selected == "Analisis":
             st.plotly_chart(fig2, use_container_width=True)
 
         # Fitur 1: Informasi Lebih Lanjut
-        with st.expander("Data Awal"):
-            st.write("Menampilkan cuplikan awal data transaksi SPKLU yang digunakan dalam analisis.")
+        with st.expander("Informasi Seputar Clustering"):
+
+            # --- Insight Clustering (Deskripsi Naratif) ---
+
+            st.markdown("""
+            **Cluster Tinggi**
+
+            Menunjukkan SPKLU dengan **pendapatan, jumlah KWH, dan jumlah transaksi yang tinggi**.
+            Biasanya SPKLU di cluster ini merupakan **lokasi strategis** atau dengan **tingkat pemanfaatan optimal**.
+
+            ---
+
+            **Cluster Sedang**
+            SPKLU dengan **pendapatan, jumlah KWH, dan transaksi pada tingkat menengah**.
+            Artinya, potensi cukup baik namun masih bisa ditingkatkan, misalnya dengan promosi atau peningkatan kapasitas.
+
+            ---
+
+            **Cluster Rendah**
+            SPKLU dengan **pendapatan, jumlah KWH, dan transaksi rendah**.
+            Biasanya ini menunjukkan **lokasi yang kurang strategis** atau masih **belum banyak dimanfaatkan** oleh pengguna kendaraan listrik.
+            """)
     
     
     # ============================
@@ -1097,13 +1117,11 @@ elif selected == "Analisis":
             )
             st.plotly_chart(fig_transaksi, use_container_width=True)
 
-        # Opsional: lihat data
         with st.expander("Lihat Data Tren Bulanan"):
             st.dataframe(
-            df_tren[["Bulan & Tahun", "Jumlah Transaksi", "Jumlah KWH", "Total Pendapatan"]]
-            .reset_index(drop=True),  # hilangkan index
-            use_container_width=True
-        )
+                df_tren[["Bulan & Tahun", "Jumlah Transaksi", "Jumlah KWH", "Total Pendapatan"]],
+                hide_index=True  # index disembunyikan
+            )
 
 
 
