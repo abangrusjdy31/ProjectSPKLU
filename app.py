@@ -66,7 +66,7 @@ with st.sidebar:
                 "border-radius": "8px"
             },
             "nav-link-selected": {
-                "background-color": "#B3D9FF",
+                "background-color": "#FFFFFF",
                 "color": "#003366",
                 "font-weight": "bold"
             }
