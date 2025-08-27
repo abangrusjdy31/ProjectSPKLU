@@ -1214,6 +1214,93 @@ elif selected == "Analisis":
                 hide_index=True  # index disembunyikan
             )
 
+    # ============================
+    # Tab 7 - Ulik SPKLU Lebih Dalam
+    # ============================
+    with tab7:
+        st.subheader("🔎 Ulik SPKLU Lebih Dalam")
+
+        # --- Pilih SPKLU ---
+        selected_spklu = st.selectbox("Pilih SPKLU", sorted(df2["Nama SPKLU"].unique()))
+
+        # --- Filter data ---
+        df_spklu = df2[df2["Nama SPKLU"] == selected_spklu].copy()
+
+        # Pastikan ada kolom Bulan & Tahun terpisah
+        if "BulanNum" not in df_spklu.columns:
+            bulan_map = {
+                "Januari": 1, "Februari": 2, "Maret": 3, "April": 4,
+                "Mei": 5, "Juni": 6, "Juli": 7, "Agustus": 8,
+                "September": 9, "Oktober": 10, "November": 11, "Desember": 12
+            }
+            df_spklu[["Bulan", "Tahun"]] = df_spklu["Bulan & Tahun"].str.split(" ", n=1, expand=True)
+            df_spklu["Tahun"] = df_spklu["Tahun"].astype(int)
+            df_spklu["BulanNum"] = df_spklu["Bulan"].map(bulan_map)
+            df_spklu["key"] = df_spklu["Tahun"] * 100 + df_spklu["BulanNum"]
+
+        # --- Ringkasan ---
+        total_trx = int(df_spklu["Jumlah Transaksi"].sum())
+        total_kwh = float(df_spklu["Jumlah KWH"].sum())
+        total_pendapatan = float(df_spklu["Total Pendapatan"].sum())
+
+        c1, c2, c3 = st.columns(3)
+        c1.metric("Total Transaksi", f"{total_trx:,.0f}")
+        c2.metric("Total kWh", f"{total_kwh:,.0f}")
+        c3.metric("Total Pendapatan", f"Rp {total_pendapatan:,.0f}")
+
+        st.markdown("---")
+
+        # --- Tren Bulanan (line chart) ---
+        df_tren = (
+            df_spklu.groupby(["key", "Bulan & Tahun"])
+            .agg({"Jumlah Transaksi":"sum", "Jumlah KWH":"sum", "Total Pendapatan":"sum"})
+            .reset_index()
+            .sort_values("key")
+        )
+
+        fig_line = px.line(
+            df_tren, x="Bulan & Tahun", y=["Jumlah Transaksi", "Jumlah KWH", "Total Pendapatan"],
+            markers=True,
+            title=f"Tren Bulanan - {selected_spklu}"
+        )
+        fig_line.update_traces(line=dict(width=3))
+        fig_line.update_layout(margin=dict(t=40, b=20, l=10, r=10), xaxis_title=None, yaxis_title=None)
+        st.plotly_chart(fig_line, use_container_width=True)
+
+        st.markdown("---")
+
+        # --- Distribusi per Charger (bar) ---
+        if "Charger_ID" in df2.columns:
+            df_charger = df2[df2["Nama SPKLU"] == selected_spklu].groupby("Charger_ID").agg({
+                "Jumlah Transaksi":"sum", "Jumlah KWH":"sum", "Total Pendapatan":"sum"
+            }).reset_index()
+
+            fig_bar = px.bar(
+                df_charger, x="Charger_ID", y="Jumlah Transaksi", text="Jumlah Transaksi",
+                title=f"Distribusi Transaksi per Charger - {selected_spklu}",
+                color="Jumlah Transaksi", color_continuous_scale="Blues"
+            )
+            fig_bar.update_traces(textposition="outside")
+            st.plotly_chart(fig_bar, use_container_width=True)
+
+        # --- Donut per Kategori Charger (pakai df4) ---
+        df_kat = df4[df4["Nama SPKLU"] == selected_spklu]
+        if not df_kat.empty:
+            kategori_count = df_kat["Kategori"].value_counts()
+
+            fig_donut = go.Figure(data=[go.Pie(
+                labels=kategori_count.index,
+                values=kategori_count.values,
+                hole=0.5,
+                textinfo="percent+label"
+            )])
+            fig_donut.update_layout(
+                title=f"Proporsi Kategori Charger - {selected_spklu}",
+                margin=dict(t=40, b=20, l=20, r=20)
+            )
+            st.plotly_chart(fig_donut, use_container_width=True)
+
+
 
 
 
