@@ -325,6 +325,12 @@ if selected == "Menu Utama":
             </table>
         </div>
         """
+        # === bedakan warna marker ===
+        if pilihan_spklu != "Silahkan pilih SPKLU" and row["NAMA_SPKLU"] == pilihan_spklu:
+            icon_color = "red"   # warna khusus SPKLU terpilih
+        else:
+            icon_color = "green" # default warna hijau
+
         folium.Marker(
             location=[row['LAT'], row['LON']],
             popup=folium.Popup(popup_html, max_width=300),
