@@ -303,6 +303,7 @@ if selected == "Menu Utama":
         ["SPKLU PLN TRANSMART CIPADUNG", -6.92571, 107.711582],
         ["SPKLU PLN HOTEL CEMERLANG", -6.912288, 107.597528],
         ["SPKLU PLN Best Western Hotel Setiabudhi Bandung", -6.861139, 107.595205],
+        ["SPKLU BALAI KOTA BANDUNG", -6.9112913, 107.6085796],
         ["SPKLU PLN PODOMORO PARK", -6.975489985714249, 107.63678321534289]
     ]
 
@@ -325,8 +326,11 @@ if selected == "Menu Utama":
             </table>
         </div>
         """
+        # Samakan format nama
+        nama_row = str(row["NAMA_SPKLU"]).strip().lower()
+        nama_pilihan = str(pilihan_spklu).strip().lower()
         # === bedakan warna marker ===
-        if pilihan_spklu != "Silahkan pilih SPKLU" and row["NAMA_SPKLU"] == pilihan_spklu:
+        if pilihan_spklu != "Silahkan pilih SPKLU" and nama_row == nama_pilihan:
             icon_color = "red"   # warna khusus SPKLU terpilih
         else:
             icon_color = "green" # default warna hijau
