@@ -339,7 +339,7 @@ if selected == "Menu Utama":
             location=[row['LAT'], row['LON']],
             popup=folium.Popup(popup_html, max_width=300),
             tooltip=row['NAMA_SPKLU'],
-            icon=folium.Icon(color="green", icon="bolt", prefix="fa")
+            icon=folium.Icon(color=icon_color, icon="bolt", prefix="fa")
         ).add_to(marker_cluster)
 
     folium_static(m, width=1100, height=700)
