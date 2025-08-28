@@ -302,7 +302,8 @@ if selected == "Menu Utama":
         ["SPKLU PLN RS ADVENT BANDUNG", -6.89213, 107.603044],
         ["SPKLU PLN TRANSMART CIPADUNG", -6.92571, 107.711582],
         ["SPKLU PLN HOTEL CEMERLANG", -6.912288, 107.597528],
-        ["SPKLU PLN Best Western Hotel Setiabudhi Bandung", -6.861139, 107.595205]
+        ["SPKLU PLN Best Western Hotel Setiabudhi Bandung", -6.861139, 107.595205],
+        ["SPKLU PLN PODOMORO PARK", -6.975489985714249, 107.63678321534289]
     ]
 
     df_lokasi = pd.DataFrame(spklu_locations, columns=["NAMA_SPKLU", "LAT", "LON"])
